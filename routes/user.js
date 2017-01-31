@@ -4,6 +4,24 @@ import { User } from '../models';
 
 export const userAttributes = ['id', 'name', 'zipcode'];
 
+export function getUser(req, res, next) {	
+	
+	return User.find({
+		where: {
+			id: req.query.userId
+		},
+		attributes: userAttributes
+	})
+	.then(function(userData) {
+		return res.status(201).json(userData);
+	})
+	.catch(function(err) {
+		console.error('Error in getUser: ', err);
+		return res.status(500).json('User not found');
+	});
+}
+app.get('/user', getUser);
+
 export function postUser(req, res, next) {	
 	console.log(req.body);
 	const phoneHash = CryptoJS.AES.encrypt(req.body.phone, process.env.PHONE_KEY).toString();
