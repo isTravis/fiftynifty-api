@@ -1,0 +1,2 @@
+process.env.DATABASE_URL = '<YOUR-POSTGRES-URI>';
+process.env.POSTMARK_API_KEY = '<YOUR-KEY-HERE>';
