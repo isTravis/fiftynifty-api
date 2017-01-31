@@ -2,8 +2,6 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import cookieParser from 'cookie-parser';
 
-import { sequelize, User } from './models';
-
 /* -------------------------------- */
 /* Initialize development variables */
 /* -------------------------------- */
@@ -23,37 +21,6 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 app.use(cookieParser());
 
-/* -------- */
-/* Configure app session */
-/* -------- */
-const session = require('express-session');
-const SequelizeStore = require('connect-session-sequelize')(session.Store);
-app.use(session({
-	secret: 'sessionsecret',
-	resave: false,
-	saveUninitialized: false,
-	store: new SequelizeStore({
-		db: sequelize
-	}),
-	cookie: {
-		path: '/',
-		httpOnly: false,
-		secure: false,
-		maxAge: 365 * 24 * 60 * 60 * 1000// = 365 days.
-	},
-}));
-
-/* ------------------- */
-/* Configure app login */
-/* ------------------- */
-const passport = require('passport');
-
-app.use(passport.initialize());
-app.use(passport.session());
-
-passport.use(User.createStrategy());
-passport.serializeUser(User.serializeUser()); // use static serialize and deserialize of model for passport session support
-passport.deserializeUser(User.deserializeUser()); // use static serialize and deserialize of model for passport session support
 /* -------------------- */
 /* -------------------- */
 
