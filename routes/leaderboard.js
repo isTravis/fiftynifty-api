@@ -1,8 +1,8 @@
 import CryptoJS from 'crypto-js';
 import app from '../server';
-import { User } from '../models';
+import { User, Call } from '../models';
 
-export const userAttributes = ['id', 'name', 'zipcode'];
+export const userAttributes = ['id', 'name', 'zipcode', 'parentId', 'hierarchyLevel'];
 
 export function getLeaderboard(req, res, next) {	
 
@@ -10,11 +10,10 @@ export function getLeaderboard(req, res, next) {
 		where: {
 			parentId: null
 		},
-		include: {
-			model: User,
-			as: 'descendents',
-			hierarchy: true,
-		},
+		include: [
+			{ model: User, as: 'descendents', hierarchy: true, attributes: userAttributes, include: { model: Call, as: 'calls' } },
+			{ model: Call, as: 'calls' },
+		],
 		attributes: userAttributes,
 	})
 	.then(function(leadersData) {

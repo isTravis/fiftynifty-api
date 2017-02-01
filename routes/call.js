@@ -6,7 +6,6 @@ import { encryptPhone } from '../utilities/encryption';
 export function newCall(req, res, next) {	
 	console.log('New call', req.body);
 	const call = new twilio.TwimlResponse();
-	console.log(encryptPhone(req.body.From));
 	User.findOne({
 		where: {
 			phone: encryptPhone(req.body.From),
@@ -23,7 +22,6 @@ export function newCall(req, res, next) {
 		}
 		res.status(200);
 		res.type('text/xml');
-		console.log('tostring', call.toString());
 		res.send(call.toString());
 	})
 	.catch(function(err) {
