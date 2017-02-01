@@ -7,6 +7,8 @@ import { User, Call } from '../models';
 export function newCall(req, res, next) {	
 	console.log('New call', req.body);
 	const call = new twilio.TwimlResponse();
+	console.log(req.body.From, process.env.PHONE_KEY);
+	console.log('Looking for ', CryptoJS.AES.encrypt(req.body.From, process.env.PHONE_KEY).toString())
 	User.findOne({
 		where: {
 			phone: CryptoJS.AES.encrypt(req.body.From, process.env.PHONE_KEY).toString()
@@ -15,12 +17,12 @@ export function newCall(req, res, next) {
 	.then(function(callingUser) {
 		if (!callingUser) {
 			console.log('Could not find user that is calling.')
-			call.say('I\'m sorry - we cannot find your number in our system. Please signup at fifty nifty dot org.')
+			call.say('I\'m sorry - we cannot find your number in our system. Please signup at fifty nifty dot org. Thank you.')
 			call.hangup();
 		} else {
 			console.log('Found the user');
 			call.play('static/representative.mp3');
-			call.say('Howdy fella. This is Andy Lipmann speaking.');
+			call.say('Connecting to Ed Markey');
 			call.hangup();
 		}
 		res.status(200);
