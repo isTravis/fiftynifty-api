@@ -18,6 +18,7 @@ export function newCall(req, res, next) {
 		} else {
 			call.play('static/representative.mp3');
 			call.say('Connecting to Ed Markey');
+			// Now connect them to the real number.
 			call.hangup();
 		}
 		res.status(200);
@@ -48,7 +49,6 @@ export function callStatusChange(req, res, next) {
 			});
 		})
 		.then(function() {
-
 			res.status(200);
 			res.type('text/xml');
 			res.send('');
