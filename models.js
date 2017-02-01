@@ -36,14 +36,13 @@ const User = sequelize.define('User', {
 User.isHierarchy();
 
 const Call = sequelize.define('Call', {
+	numberDialed: { type: Sequelize.TEXT },
+	recipientId: { type: Sequelize.TEXT },
+	district: { type: Sequelize.INTEGER },
+	state: { type: Sequelize.TEXT },
+	zip: { type: Sequelize.TEXT },
+	duration: { type: Sequelize.INTEGER },
 	// callerId
-	// numberDialed 
-	// recipient
-	// county
-	// state
-	// zip
-	// createdAt
-	// duration
 });
 
 // A pub can have many contributors, but a contributor belongs to only a single pub
