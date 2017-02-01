@@ -17,20 +17,18 @@ export function newCall(req, res, next) {
 			console.log('Could not find user that is calling.')
 			call.say('I\'m sorry - we cannot find your number in our system. Please signup at fifty nifty dot org.')
 			call.hangup();
+		} else {
+			console.log('Found the user');
+			call.play('static/representative.mp3');
+			call.say('Howdy fella. This is Andy Lipmann speaking.');
+			call.hangup();
 		}
 		res.status(200);
 		res.type('text/xml');
 		console.log('tostring', call.toString());
 		res.send(call.toString());
 	})
-	const call = new twilio.TwimlResponse();
-	call.play('static/representative.mp3');
-	call.say('Howdy fella. This is Andy Lipmann speaking.')
-	call.hangup();
-	res.status(200);
-	res.type('text/xml');
-	console.log('tostring', call.toString());
-	res.send(call.toString());
+	
 	// const phoneHash = CryptoJS.AES.encrypt(req.body.phone, process.env.PHONE_KEY).toString();
 	// return User.create({
 	// 	phone: phoneHash,
