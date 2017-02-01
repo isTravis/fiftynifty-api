@@ -43,7 +43,7 @@ export function callStatusChange(req, res, next) {
 			return Call.create({
 				numberDialed: req.body.To,
 				state: req.body.ToState, // This is not the real state value we want, we want the reps state and district.
-				duration: req.body.callDuration,
+				duration: req.body.CallDuration,
 				callerId: callingUser.id,
 			});
 		})
