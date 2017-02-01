@@ -35,8 +35,33 @@ app.post('/newcall', newCall);
 
 export function callStatusChange(req, res, next) {	
 	console.log('In call status change ', req.body);
-	res.status(200);
-	res.type('text/xml');
-	res.send('');
+	if (req.body.CallStatus === 'completed') {
+		return User.findOne({
+			where: {
+				phone: encryptPhone(req.body.From),
+			}
+		})
+		.then(function(callingUser) {
+			return Call.create({
+				numberDialed: req.body.To,
+				state: req.body.ToState, // This is not the real state value we want, we want the reps state and district.
+				duration: req.body.callDuration,
+				callerId: callingUser.id,
+			});
+		})
+		.then(function() {
+
+			res.status(200);
+			res.type('text/xml');
+			res.send('');
+		})
+		.catch(function(err) {
+			console.error('Error in callStatusChange: ', err);
+			return res.status(500).json('Error with callStatusChange');
+		});
+	}
+
+	return res.status(201).json('');
+	
 }
 app.post('/callStatusChange', callStatusChange);
