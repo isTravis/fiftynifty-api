@@ -53,6 +53,7 @@ if (process.env.WORKER !== 'true') {
 	/* ------------------- */
 	require('./routes/user.js');
 	require('./routes/leaderboard.js');
+	require('./routes/call.js');
 
 	/* ------------------- */
 	/* ------------------- */
