@@ -3,6 +3,7 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 const Sequelize = require('sequelize');
+require('sequelize-hierarchy')(Sequelize);
 
 const useSSL = process.env.DATABASE_URL.indexOf('localhost:') === -1;
 const sequelize = new Sequelize(process.env.DATABASE_URL, { logging: false, dialectOptions: { ssl: useSSL } });
@@ -32,7 +33,7 @@ const User = sequelize.define('User', {
 		len: [5, 5],
 	},
 });
-
+User.isHierarchy();
 
 const Call = sequelize.define('Call', {
 	// callerId
@@ -45,23 +46,13 @@ const Call = sequelize.define('Call', {
 	// duration
 });
 
-const Invite = sequelize.define('Invite', {
-	// inviterId
-	// invitedId
-	// invitedPhone
-	// hash
-});
-
 // A pub can have many contributors, but a contributor belongs to only a single pub
 User.hasMany(Call, { onDelete: 'CASCADE', as: 'calls', foreignKey: 'callerId' });
-User.hasMany(Invite, { onDelete: 'CASCADE', as: 'invitationsReceived', foreignKey: 'invitedId' });
-User.hasMany(Invite, { onDelete: 'CASCADE', as: 'invitationsSent', foreignKey: 'inviterId' });
 
 
 const db = {
 	User: User,
 	Call: Call,
-	Invite: Invite,
 };
 
 db.sequelize = sequelize;

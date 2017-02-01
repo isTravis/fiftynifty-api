@@ -52,6 +52,7 @@ if (process.env.WORKER !== 'true') {
 	/* API Endpoints */
 	/* ------------------- */
 	require('./routes/user.js');
+	require('./routes/leaderboard.js');
 
 	/* ------------------- */
 	/* ------------------- */

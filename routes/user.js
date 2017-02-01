@@ -5,12 +5,17 @@ import { User } from '../models';
 export const userAttributes = ['id', 'name', 'zipcode'];
 
 export function getUser(req, res, next) {	
-	
+
 	return User.find({
 		where: {
 			id: req.query.userId
 		},
-		attributes: userAttributes
+		include: {
+			model: User,
+			as: 'descendents',
+			hierarchy: true,
+		},
+		attributes: userAttributes,
 	})
 	.then(function(userData) {
 		return res.status(201).json(userData);
@@ -23,12 +28,12 @@ export function getUser(req, res, next) {
 app.get('/user', getUser);
 
 export function postUser(req, res, next) {	
-	console.log(req.body);
 	const phoneHash = CryptoJS.AES.encrypt(req.body.phone, process.env.PHONE_KEY).toString();
 	return User.create({
 		phone: phoneHash,
 		name: req.body.name,
 		zipcode: req.body.zipcode,
+		parentId: req.body.parentId,
 	})
 	.then(function(result) {
 		return User.find({
