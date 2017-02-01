@@ -1,6 +1,6 @@
-import CryptoJS from 'crypto-js';
 import app from '../server';
 import { User, Call } from '../models';
+import { encryptPhone } from '../utilities/encryption';
 
 export const userAttributes = ['id', 'name', 'zipcode', 'parentId', 'hierarchyLevel'];
 
@@ -27,7 +27,8 @@ export function getUser(req, res, next) {
 app.get('/user', getUser);
 
 export function postUser(req, res, next) {	
-	const phoneHash = CryptoJS.AES.encrypt(req.body.phone, process.env.PHONE_KEY).toString();
+	const phoneHash = encryptPhone(req.body.phone);
+	
 	return User.create({
 		phone: phoneHash,
 		name: req.body.name,

@@ -1,17 +1,14 @@
-import CryptoJS from 'crypto-js';
 import twilio from 'twilio';
 import app from '../server';
 import { User, Call } from '../models';
-
+import { encryptPhone } from '../utilities/encryption';
 
 export function newCall(req, res, next) {	
 	console.log('New call', req.body);
 	const call = new twilio.TwimlResponse();
-	console.log(req.body.From, process.env.PHONE_KEY);
-	console.log('Looking for ', CryptoJS.AES.encrypt(req.body.From, process.env.PHONE_KEY).toString())
 	User.findOne({
 		where: {
-			phone: CryptoJS.AES.encrypt(req.body.From, process.env.PHONE_KEY).toString()
+			phone: encryptPhone(req.body.From),
 		}
 	})
 	.then(function(callingUser) {
