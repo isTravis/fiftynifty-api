@@ -8,6 +8,7 @@ export function newCall(req, res, next) {
 	console.log('New call', req.body);
 	const call = new twilio.TwimlResponse();
 	call.play('static/representative.mp3');
+	call.say('Howdy fella. This is Andy Lipmann speaking.')
 	call.hangup();
 	res.status(200);
 	res.type('text/xml');
