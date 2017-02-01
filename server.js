@@ -1,7 +1,7 @@
 import express from 'express';
 import bodyParser from 'body-parser';
 import cookieParser from 'cookie-parser';
-
+import path from 'path';
 /* -------------------------------- */
 /* Initialize development variables */
 /* -------------------------------- */
@@ -32,6 +32,8 @@ if (process.env.WORKER !== 'true') {
 		res.writeHead(200, { 'Content-Type': 'image/x-icon' });
 		res.end();
 	});
+
+	app.use('/static', express.static(path.resolve(__dirname, 'static')));
 
 	app.all('/*', function(req, res, next) {
 		res.header('Access-Control-Allow-Origin', req.headers.origin);
