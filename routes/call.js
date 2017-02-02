@@ -1,19 +1,49 @@
 import twilio from 'twilio';
 import app from '../server';
 import { User, Call } from '../models';
-import { encryptPhone } from '../utilities/encryption';
+import { encryptPhone, decryptPhone } from '../utilities/encryption';
+
+const accountSid = 'ACeae8630b3d059b944fd532db9bf4ac7d';
+const authToken = '3b7a1811e3f9e87f6b304f6308441827';
+const client = require('twilio')(accountSid, authToken);
+const urldomain = process.env.API_SERVER;
+
+export function callFromServer(req, res) {
+	const userId = req.body.userId;
+	const congressNumber = req.body.congressNumber;
+	User.findOne({
+		where: {
+			id: userId,
+		}
+	})
+	.then(function(newUser) {
+		const userPhone = decryptPhone(newUser.dataValues.phone);
+		client.makeCall({
+			to: userPhone,
+			from: process.env.TWILIO_NUMBER,
+			url: urldomain + '/newcall',
+		});
+	});
+}
+app.post('/callfromserver', callFromServer);
 
 export function newCall(req, res, next) {	
 	console.log('New call', req.body);
 	const call = new twilio.TwimlResponse();
+	let userPhone = req.body.From;
+	if (req.body.From === process.env.TWILIO_NUMBER) {
+		userPhone = req.body.To;
+	} else {
+		userPhone = req.body.From;
+	}
 	User.findOne({
 		where: {
-			phone: encryptPhone(req.body.From),
+			phone: encryptPhone(userPhone),
 		}
 	})
 	.then(function(callingUser) {
 		if (!callingUser) {
-			call.say('I\'m sorry - we cannot find your number in our system. Please signup at fifty nifty dot org. Thank you.')
+			call.say('I\'m sorry - we cannot find your number in our system. Please signup at fifty nifty dot org. Thank you.');
 			call.hangup();
 		} else {
 			call.play('static/representative.mp3');
