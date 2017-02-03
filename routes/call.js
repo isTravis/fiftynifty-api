@@ -3,9 +3,7 @@ import app from '../server';
 import { User, Call } from '../models';
 import { encryptPhone, decryptPhone } from '../utilities/encryption';
 
-const accountSid = 'ACeae8630b3d059b944fd532db9bf4ac7d';
-const authToken = '3b7a1811e3f9e87f6b304f6308441827';
-const client = require('twilio')(accountSid, authToken);
+const client = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 const urldomain = process.env.API_SERVER;
 
 export function callFromServer(req, res) {
@@ -39,12 +37,8 @@ app.post('/callfromserver', callFromServer);
 export function newCall(req, res, next) {	
 	console.log('New call', req.body);
 	const call = new twilio.TwimlResponse();
-	let userPhone = req.body.From;
-	if (req.body.From === process.env.TWILIO_NUMBER) {
-		userPhone = req.body.To;
-	} else {
-		userPhone = req.body.From;
-	}
+	const userPhone = req.body.From === process.env.TWILIO_NUMBER ? req.body.To : req.body.From;
+
 	User.findOne({
 		where: {
 			phone: encryptPhone(userPhone),
