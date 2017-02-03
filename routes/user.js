@@ -4,7 +4,7 @@ import app from '../server';
 import { User, Call } from '../models';
 import { encryptPhone } from '../utilities/encryption';
 
-export const userAttributes = ['id', 'name', 'zipcode', 'parentId', 'hierarchyLevel', 'lat', 'lon'];
+export const userAttributes = ['id', 'name', 'zipcode', 'parentId', 'hierarchyLevel', 'lat', 'lon', 'createdAt'];
 
 const queryForUser = function(userId) {
 	return User.findOne({
