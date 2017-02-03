@@ -1,14 +1,15 @@
+import Promise from 'bluebird';
 import request from 'request-promise';
 import app from '../server';
 import { User, Call } from '../models';
 import { encryptPhone } from '../utilities/encryption';
 
-export const userAttributes = ['id', 'name', 'zipcode', 'parentId', 'hierarchyLevel'];
+export const userAttributes = ['id', 'name', 'zipcode', 'parentId', 'hierarchyLevel', 'lat', 'lon'];
 
-export function getUser(req, res, next) {	
-	return User.find({
+const queryForUser = function(userId) {
+	return User.findOne({
 		where: {
-			id: req.query.userId
+			id: userId,
 		},
 		include: [
 			{ model: User, as: 'descendents', hierarchy: true, attributes: userAttributes, include: { model: Call, as: 'calls' } },
@@ -16,6 +17,21 @@ export function getUser(req, res, next) {
 		],
 		attributes: userAttributes,
 	})
+	.then(function(userData) {
+		const lookupQuery = userData.lat ? `latitude=${userData.lat}&longitude=${userData.lon}` : `zip=${userData.zipcode}`;
+		const findReps = request({ 
+			uri: `https://congress.api.sunlightfoundation.com/legislators/locate?apikey=${process.env.SUNLIGHT_FOUNDATION_KEY}&${lookupQuery}`, 
+			json: true 
+		});
+		return Promise.all([userData, findReps]);
+	})
+	.spread(function(userData, repsData) {
+		return { ...userData.toJSON(), reps: repsData.results };
+	});
+};
+
+export function getUser(req, res, next) {	
+	queryForUser(req.query.userId)
 	.then(function(userData) {
 		return res.status(201).json(userData);
 	})
@@ -29,7 +45,7 @@ app.get('/user', getUser);
 export function postUser(req, res, next) {	
 	const phoneHash = encryptPhone(req.body.phone);
 	
-	return User.create({
+	User.create({
 		phone: phoneHash,
 		name: req.body.name,
 		zipcode: req.body.zipcode,
@@ -61,14 +77,32 @@ export function findLatLocFromAddressInput(req, res, next) {
 	const zipCode = req.body.zipcode;
 	const apiRequestUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${addressHtml}&components=postal_code:${zipCode}&key=${GOOGLE_KEY}`;
 
-	return request(apiRequestUrl)
+	request({ uri: apiRequestUrl, json: true })
 	.then((response) => {
 		const lat = response.results[0].geometry.location.lat;
-		const lng = response.results[0].geometry.location.lng;
-		return { lat: lat, lng: lng }; 
+		const lon = response.results[0].geometry.location.lng;
+		const zip = response.results[0].address_components.reduce((previous, current)=> {
+			if (current.types[0] === 'postal_code') { return current.short_name; }
+			return previous;
+		}, '00000');
+
+		if (zip === '00000') { console.log(apiRequestUrl); }
+
+		return User.update({ lat: lat, lon: lon, zip: zip }, {
+			where: {
+				id: req.body.userId
+			}
+		});
 	})
-	.catch((error) => {
-		console.log(error);
+	.then(function(updateCount) {
+		return queryForUser(req.body.userId);
+	})
+	.then(function(userData) {
+		return res.status(201).json(userData); 
+	})
+	.catch((err) => {
+		console.log(err);
+		return res.status(500).json(err); 
 	});
 }
 app.post('/address', findLatLocFromAddressInput);
