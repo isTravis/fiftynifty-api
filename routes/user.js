@@ -5,7 +5,6 @@ import { encryptPhone } from '../utilities/encryption';
 export const userAttributes = ['id', 'name', 'zipcode', 'parentId', 'hierarchyLevel'];
 
 export function getUser(req, res, next) {	
-
 	return User.find({
 		where: {
 			id: req.query.userId
@@ -52,3 +51,23 @@ export function postUser(req, res, next) {
 	});
 }
 app.post('/user', postUser);
+
+export function findLatLocFromAddressInput(req, res, next) {
+	const GOOGLE_KEY = process.env.GEOCODING_API_KEY;
+	const googleApiUrl = 'https://maps.googleapis.com/maps/api/geocode/json';
+	const addressHtml = encodeURI(req.body.address);
+	const zipCode = req.body.zipcode;
+	const ultimateUrl = `${googleApiUrl}?address=${addressHtml}&components=postal_code:${zipCode}&key=${GOOGLE_KEY}`;
+	console.log('Fetching ' + ultimateUrl);
+	return clientFetch(ultimateUrl)
+	.then((response) => {
+		let lat = response.results[0].geometry.location.lat;
+		let lng = response.results[0].geometry.location.lng;
+		console.log(lat, lng);
+		return lat, lng; // Obj {lat, lng}
+	})
+	.catch((error) => {
+		console.log(error);
+	});
+}
+app.post('/address', findLatLocFromAddressInput);
