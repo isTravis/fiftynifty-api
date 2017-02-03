@@ -22,6 +22,15 @@ export function callFromServer(req, res) {
 			to: userPhone,
 			from: process.env.TWILIO_NUMBER,
 			url: urldomain + '/newcall',
+		}, function (err, message) {
+			console.log(err);
+			if (err) {
+				res.status(500).send(err);
+			} else {
+				res.send({
+					message: 'Thank you! We will be calling you shortly.',
+				});
+			}
 		});
 	});
 }

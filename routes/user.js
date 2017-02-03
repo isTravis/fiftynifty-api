@@ -52,3 +52,20 @@ export function postUser(req, res, next) {
 	});
 }
 app.post('/user', postUser);
+
+export function findLatLocFromAddressInput(req, res, next) {
+	const GOOGLE_KEY = process.env.GEOCODING_API_KEY;
+	const googleApiUrl = 'https://maps.googleapis.com/maps/api/geocode/json';
+	const addressHtml = encodeURI(req.body.address);
+	console.log(addressHtml);
+	const zipCode = req.body.zipcode;
+	return fetch(`${googleApiUrl}?address=${addressHtml}&components=postal_code:${zipCode}&key=${GOOGLE_KEY}`)
+	.then((response) => {
+		console.log(response.body);
+		if (!response.ok) {
+			return response.json().then(err => { throw err; });
+		}
+		return response;
+	});
+}
+app.post('/address', findLatLocFromAddressInput);
