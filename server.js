@@ -2,7 +2,6 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import cookieParser from 'cookie-parser';
 import path from 'path';
-import fetch from 'isomorphic-fetch';
 
 /* -------------------------------- */
 /* Initialize development variables */
@@ -25,19 +24,6 @@ app.use(cookieParser());
 
 /* -------------------- */
 /* -------------------- */
-
-global.clientFetch = function(route, opts) {
-	return fetch(route, {
-		...opts,
-		credentials: 'same-origin'
-	})
-	.then((response)=> {
-		if (!response.ok) { 
-			return response.json().then(err => { throw err; });
-		}
-		return response.json();
-	});
-};
 
 if (process.env.WORKER !== 'true') {
 

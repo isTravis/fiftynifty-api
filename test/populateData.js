@@ -7,10 +7,10 @@ console.log('Beginning Population');
 // sequelize.sync({ force: true })
 User.count()
 .then(function(count) {
-	const newUsers = generateUsers(1000, count);	
+	const newUsers = generateUsers(10000, count);	
 	console.log('Beginning creating Users');
 	return Promise.each(newUsers, function(user, index) {
-		if (index % 100 === 0) { console.log(`Created ${index} users`); }
+		if (index > 0 && index % 100 === 0) { console.log(`Created ${index} users`); }
 		return User.create(user);
 	});
 })

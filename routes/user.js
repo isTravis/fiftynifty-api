@@ -1,3 +1,4 @@
+import request from 'request-promise';
 import app from '../server';
 import { User, Call } from '../models';
 import { encryptPhone } from '../utilities/encryption';
@@ -53,18 +54,18 @@ export function postUser(req, res, next) {
 app.post('/user', postUser);
 
 export function findLatLocFromAddressInput(req, res, next) {
+	// Address: String '123 Chestnut St Boston '
+	// Zipcode: String '02476'
 	const GOOGLE_KEY = process.env.GEOCODING_API_KEY;
-	const googleApiUrl = 'https://maps.googleapis.com/maps/api/geocode/json';
 	const addressHtml = encodeURI(req.body.address);
 	const zipCode = req.body.zipcode;
-	const ultimateUrl = `${googleApiUrl}?address=${addressHtml}&components=postal_code:${zipCode}&key=${GOOGLE_KEY}`;
-	console.log('Fetching ' + ultimateUrl);
-	return clientFetch(ultimateUrl)
+	const apiRequestUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${addressHtml}&components=postal_code:${zipCode}&key=${GOOGLE_KEY}`;
+
+	return request(apiRequestUrl)
 	.then((response) => {
-		let lat = response.results[0].geometry.location.lat;
-		let lng = response.results[0].geometry.location.lng;
-		console.log(lat, lng);
-		return lat, lng; // Obj {lat, lng}
+		const lat = response.results[0].geometry.location.lat;
+		const lng = response.results[0].geometry.location.lng;
+		return { lat: lat, lng: lng }; 
 	})
 	.catch((error) => {
 		console.log(error);
