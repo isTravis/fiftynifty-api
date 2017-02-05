@@ -3,8 +3,9 @@ import request from 'request-promise';
 import app from '../server';
 import { User, Call } from '../models';
 import { encryptPhone } from '../utilities/encryption';
+import { zipcodeToStateDistrict } from '../utilities/zipcodeData';
 
-export const userAttributes = ['id', 'name', 'zipcode', 'parentId', 'hierarchyLevel', 'lat', 'lon', 'createdAt'];
+export const userAttributes = ['id', 'name', 'zipcode', 'parentId', 'hierarchyLevel', 'lat', 'lon', 'createdAt', 'state', 'district'];
 
 const queryForUser = function(userId) {
 	return User.findOne({
@@ -44,28 +45,31 @@ app.get('/user', getUser);
 
 export function postUser(req, res, next) {	
 	const phoneHash = encryptPhone(req.body.phone);
-	
-	User.create({
-		phone: phoneHash,
-		name: req.body.name,
-		zipcode: req.body.zipcode,
-		parentId: req.body.parentId,
-	})
-	.then(function(result) {
-		return User.find({
-			where: {
-				id: result.id
-			},
-			attributes: userAttributes
+	zipcodeToStateDistrict(req.body.zipcode).then((stateDist)=>{
+		User.create({
+			phone: phoneHash,
+			name: req.body.name,
+			zipcode: req.body.zipcode,
+			parentId: req.body.parentId,
+			state: stateDist.state,
+			district: stateDist.district,
+		})
+		.then(function(result) {
+			return User.find({
+				where: {
+					id: result.id
+				},
+				attributes: userAttributes
+			});
+		})
+		.then(function(userData) {
+			return res.status(201).json(userData);
+		})
+		.catch(function(err) {
+			console.error('Error in postUser: ', err);
+			return res.status(500).json('Phone number already used');
 		});
-	})
-	.then(function(userData) {
-		return res.status(201).json(userData);
-	})
-	.catch(function(err) {
-		console.error('Error in postUser: ', err);
-		return res.status(500).json('Phone number already used');
-	});
+    });
 }
 app.post('/user', postUser);
 

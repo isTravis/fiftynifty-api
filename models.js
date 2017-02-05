@@ -38,6 +38,12 @@ const User = sequelize.define('User', {
 	lon: {
 		type: Sequelize.DOUBLE,
 	},
+	state: {
+        type: Sequelize.TEXT,
+	},
+	district: {
+		type: Sequelize.INTEGER,
+	}
 });
 User.isHierarchy();
 
