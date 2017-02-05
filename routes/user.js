@@ -3,9 +3,22 @@ import request from 'request-promise';
 import app from '../server';
 import { User, Call } from '../models';
 import { encryptPhone } from '../utilities/encryption';
-import { zipcodeToStateDistrict } from '../utilities/zipcodeData';
 
 export const userAttributes = ['id', 'name', 'zipcode', 'parentId', 'hierarchyLevel', 'lat', 'lon', 'createdAt', 'state', 'district'];
+
+const getStateDistrict = function (locData) {
+    const lookupQuery = locData.lat ? `latitude=${locData.lat}&longitude=${locData.lon}` : `zip=${locData.zipcode}`;
+    const apiRequestUrl = `https://congress.api.sunlightfoundation.com/districts/locate?apikey=${process.env.SUNLIGHT_FOUNDATION_KEY}&${lookupQuery}`;
+    const getStateDist = request({uri: apiRequestUrl, json: true} )
+        .then((response) => {
+            return response.results[0];
+        })
+        .catch((err) => {
+            console.log(err);
+            return {'state': null, 'district':null};
+        });
+    return getStateDist;
+};
 
 const queryForUser = function(userId) {
 	return User.findOne({
@@ -45,7 +58,8 @@ app.get('/user', getUser);
 
 export function postUser(req, res, next) {	
 	const phoneHash = encryptPhone(req.body.phone);
-	zipcodeToStateDistrict(req.body.zipcode).then((stateDist)=>{
+	const locData = { zipcode :req.body.zipcode};
+    getStateDistrict(locData).then((stateDist)=>{
 		User.create({
 			phone: phoneHash,
 			name: req.body.name,
@@ -91,12 +105,16 @@ export function findLatLocFromAddressInput(req, res, next) {
 		}, '00000');
 
 		if (zip === '00000') { console.log(apiRequestUrl); }
-
-		return User.update({ lat: lat, lon: lon, zip: zip }, {
-			where: {
-				id: req.body.userId
-			}
-		});
+        const locData = { lat :lat, lon:lon};
+        getStateDistrict(locData).then((response)=>{
+				const state = response.state;
+				const district = response.district;
+				return User.update({ lat: lat, lon: lon, zip: zip, state:state, district:district }, {
+					where: {
+						id: req.body.userId
+					}
+				});
+		})
 	})
 	.then(function(updateCount) {
 		return queryForUser(req.body.userId);
