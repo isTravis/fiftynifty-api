@@ -19,7 +19,7 @@ export function callFromServer(req, res) {
 		client.makeCall({
 			to: userPhone,
 			from: process.env.TWILIO_NUMBER,
-			url: urldomain + '/newcall',
+			url: urldomain + '/newcall/' + congressNumber,
 		}, function (err, message) {
 			console.log(err);
 			if (err) {
@@ -63,7 +63,8 @@ export function newCall(req, res, next) {
 		return res.status(500).json('Error with new call');
 	});
 }
-app.post('/newcall', newCall);
+app.post('/newcall/:phoneNumber', newCall);
+
 
 export function callStatusChange(req, res, next) {	
 	console.log('In call status change ', req.body);
