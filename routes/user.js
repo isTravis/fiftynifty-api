@@ -11,7 +11,7 @@ const getStateDistrict = function (locData) {
     const apiRequestUrl = `https://congress.api.sunlightfoundation.com/districts/locate?apikey=${process.env.SUNLIGHT_FOUNDATION_KEY}&${lookupQuery}`;
     const getStateDist = request({uri: apiRequestUrl, json: true} )
         .then((response) => {
-            return response.results[0];
+            return response.results && response.results[0] || {'state': null, 'district':null};
         })
         .catch((err) => {
             console.log(err);
