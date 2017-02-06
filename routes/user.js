@@ -55,6 +55,31 @@ export function getUser(req, res, next) {
 }
 app.get('/user', getUser);
 
+// querying just for user details, not including phone calls and children, for showing referral on landing page
+const queryForUserDetails = function(userId) {
+    return User.findOne({
+        where: {
+            id: userId,
+        },
+        attributes: userAttributes,
+    }).then (function(userData) {
+        return userData.toJSON();
+    })
+};
+
+export function getUserDetails(req, res, next) {
+    queryForUserDetails(req.query.userId)
+        .then(function(userData) {
+            return res.status(201).json(userData);
+        })
+        .catch(function(err) {
+            console.error('Error in getUser: ', err);
+            return res.status(500).json('User not found');
+        });
+}
+app.get('/username', getUserDetails);
+
+
 export function postUser(req, res, next) {	
 	const phoneHash = encryptPhone(req.body.phone);
 	const locData = { zipcode: req.body.zipcode };
