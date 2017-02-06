@@ -32,6 +32,18 @@ const User = sequelize.define('User', {
 		allowNull: false, 
 		len: [5, 5],
 	},
+	lat: {
+		type: Sequelize.DOUBLE,
+	},
+	lon: {
+		type: Sequelize.DOUBLE,
+	},
+	state: {
+        type: Sequelize.TEXT,
+	},
+	district: {
+		type: Sequelize.INTEGER,
+	}
 });
 User.isHierarchy();
 
