@@ -6,3 +6,4 @@ node_modules
 *.swo
 npm-debug.log
 config.js
+.idea/
