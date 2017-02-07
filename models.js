@@ -49,7 +49,7 @@ const User = sequelize.define('User', {
 		type: Sequelize.INTEGER,
 	},
 	verificationCode: {
-		type: Sequelize.INTEGER,
+		type: Sequelize.STRING,
 	},
 	verificationExpiration: {
 		type: Sequelize.DATE,

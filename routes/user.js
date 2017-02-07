@@ -168,11 +168,13 @@ app.post('/address', findLatLocFromAddressInput);
 
 export function sendTwoFactorCode(req, res, next) {
 	// Check this is legit
+	const phoneHash = encryptPhone(req.body.phone);
 	User.findOne({
-		where: { phone: req.params.number },
+		where: { phone: phoneHash },
 		attributes: userAttributes,
 	})
 	.then(function(userData) { 
+		if (!userData) { throw new Error('Phone number not found'); }
 		const firstGenerationAttempt = new Date(userData.firstGenerationAttempt);
 		const now = new Date();
 		const diff = now - firstGenerationAttempt;
@@ -265,9 +267,9 @@ export function checkTwoFactorCode(req, res, next) {
 		.then(function(result) {
 			// res.send('"Correct code"');
 			// return res.status(200).end();
-			return User.find({
+			return User.findOne({
 				where: {
-					id: result.id
+					phone: phoneHash
 				},
 				attributes: userAttributes
 			})
