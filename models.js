@@ -25,12 +25,16 @@ const User = sequelize.define('User', {
 		type: Sequelize.STRING,
 		allowNull: false, 
 		unique: true,
-		len: [44, 44], // Phone number is encoded to 44 byte string
+		validate: {
+			len: [24, 24], // Phone number is encoded to 44 byte string
+		},
 	},
 	zipcode: { 
 		type: Sequelize.STRING, // Stored as a string to preserve leading zeros. 
 		allowNull: false, 
-		len: [5, 5],
+		validate: {
+			len: [5, 5],
+		},
 	},
 	lat: {
 		type: Sequelize.DOUBLE,
