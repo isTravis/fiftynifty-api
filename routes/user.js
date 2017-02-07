@@ -34,6 +34,7 @@ const queryForUser = function(userId) {
 		attributes: userAttributes,
 	})
 	.then(function(userData) {
+		if (!userData) { throw new Error('No userData'); }
 		const lookupQuery = userData.lat ? `latitude=${userData.lat}&longitude=${userData.lon}` : `zip=${userData.zipcode}`;
 		const findReps = request({ 
 			uri: `https://congress.api.sunlightfoundation.com/legislators/locate?apikey=${process.env.SUNLIGHT_FOUNDATION_KEY}&${lookupQuery}`, 
@@ -46,7 +47,20 @@ const queryForUser = function(userId) {
 	});
 };
 
-export function getUser(req, res, next) {	
+// querying just for user details, not including phone calls and children, for showing referral on landing page
+const queryForUserDetails = function(userId) {
+	return User.findOne({
+		where: {
+			id: userId,
+		},
+		attributes: userAttributes,
+	})
+	.then(function(userData) {
+		return userData.toJSON();
+	});
+};
+
+export function getUser(req, res, next) {
 	queryForUser(req.query.userId)
 	.then(function(userData) {
 		return res.status(201).json(userData);
@@ -58,36 +72,27 @@ export function getUser(req, res, next) {
 }
 app.get('/user', getUser);
 
-// querying just for user details, not including phone calls and children, for showing referral on landing page
-const queryForUserDetails = function(userId) {
-    return User.findOne({
-        where: {
-            id: userId,
-        },
-        attributes: userAttributes,
-    }).then (function(userData) {
-        return userData.toJSON();
-    })
-};
 
 export function getUserDetails(req, res, next) {
-    queryForUserDetails(req.query.userId)
-        .then(function(userData) {
-            return res.status(201).json(userData);
-        })
-        .catch(function(err) {
-            console.error('Error in getUser: ', err);
-            return res.status(500).json('User not found');
-        });
+	queryForUserDetails(req.query.userId)
+	.then(function(userData) {
+		return res.status(201).json(userData);
+	})
+	.catch(function(err) {
+		console.error('Error in getUser: ', err);
+		return res.status(500).json('User not found');
+	});
 }
 app.get('/username', getUserDetails);
 
 
 export function postUser(req, res, next) {	
 	const phoneHash = encryptPhone(req.body.phone);
+	console.log(phoneHash, 'length: ', phoneHash.length);
 	const locData = { zipcode: req.body.zipcode };
 	getStateDistrict(locData)
 	.then(function(stateDist) {
+		if (!stateDist.state) { throw new Error('Invalid Zipcode'); }
 		return User.create({
 			phone: phoneHash,
 			name: req.body.name,
@@ -110,7 +115,10 @@ export function postUser(req, res, next) {
 	})
 	.catch(function(err) {
 		console.error('Error in postUser: ', err);
-		return res.status(500).json('Phone number already used');
+		let message = 'Phone number already used';
+		if (err.message === 'Invalid Zipcode') { message = 'Invalid Zipcode'; }
+
+		return res.status(500).json(message);
 	});
 }
 app.post('/user', postUser);
