@@ -39,7 +39,7 @@ const User = sequelize.define('User', {
 		type: Sequelize.DOUBLE,
 	},
 	state: {
-        type: Sequelize.TEXT,
+		type: Sequelize.TEXT,
 	},
 	district: {
 		type: Sequelize.INTEGER,

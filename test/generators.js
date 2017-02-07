@@ -7,7 +7,9 @@ export function generateUsers(length, count) {
 	for (let index = count; index < length + count; index++) {
 		const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
 		const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
-		const zipcode = zips[Math.floor(Math.random() * zips.length)].zip;
+		const zipObject = zips[Math.floor(Math.random() * zips.length)]
+		const zipcode = zipObject.zip;
+		const state = zipObject.state;
 		const chanceOfParent = 0.8;
 		const parent = index > 0 && Math.random() < chanceOfParent ? Math.ceil(Math.random() * index) : null;
 
@@ -16,6 +18,8 @@ export function generateUsers(length, count) {
 			zipcode: zipcode,
 			phone: '+' + (10000000000 + index),
 			parentId: parent,
+			state: state,
+			district: Math.ceil(Math.random() * 8),
 		});
 	}
 	return users;
