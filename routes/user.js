@@ -1,8 +1,7 @@
-import twilio from 'twilio';
 import Promise from 'bluebird';
 import request from 'request-promise';
 import app from '../server';
-import { User, Call, VerificationCode } from '../models';
+import { User, Call } from '../models';
 import { encryptPhone } from '../utilities/encryption';
 // import { parse, format } from 'libphonenumber-js';
 
@@ -170,109 +169,116 @@ app.post('/address', findLatLocFromAddressInput);
 export function sendTwoFactorCode(req, res, next) {
 	// Check this is legit
 	User.findOne({
-		where: { phone: req.params.number},
+		where: { phone: req.params.number },
 		attributes: userAttributes,
 	})
 	.then(function(userData) { 
 		const firstGenerationAttempt = new Date(userData.firstGenerationAttempt);
 		const now = new Date();
 		const diff = now - firstGenerationAttempt;
-		if ( userData.codeGenerationAttempts > 10 && diff > (10 * 60 * 1000) ) { // Not legit
-			return res.status(500).json('Too many code generation attemps. Try again in 10 minutes.');
-		} else () { // It's legit
-			// Generate random in range
-			const verificationCode = Math.floor(Math.random() * (999999 - 100000) + 100000);
-			const isItFirstAttempt = (userData.codeGenerationAttempts === 0);
-			const nowInUTC = now.toUTCString();
-			User.update({
-				verificationCode: verificationCode,
-				verificationExpiration: nowInUTC,
-				codeGenerationAttempts: userData.codeGenerationAttempts + 1,
-				firstGenerationAttempt: isItFirstAttempt ? nowInUTC : userData.firstGenerationAttempt,
-			}, {
-				where: { phone: encryptPhone(req.params.number) },
-			})
-			.then(function(result) {
-				if (result[0] === 0){
-					console.log(`${req.params.number} - Phone not in the database`);
-					return res.status(500).json('Phone not in the database');
-				} else {
-					client.messages.create({
-						to: req.params.number,
-						from: process.env.TWILIO_NUMBER,
-						body: `The verification code is ${verificationCode}`,
-					})
-					.then(function() {
-						res.send('"Code created"');
-						return res.status(201).end();
-					});
-				}
-			})
-			.catch(function(err) {
-				console.log(`Verification code creation error ${err}`);
-				return res.status(500).json(err);
-			});
+		if (userData.codeGenerationAttempts > 10 && diff > (10 * 60 * 1000)) { // Not legit
+			throw new Error('Too many code generation attemps. Try again in 10 minutes.');
 		} 
+		// It's legit
+		// Generate random in range
+		const verificationCode = Math.floor(Math.random() * ((999999 - 100000) + 100000));
+		const isItFirstAttempt = (userData.codeGenerationAttempts === 0);
+		const nowInUTC = now.toUTCString();
+		const updateUser = User.update({
+			verificationCode: verificationCode,
+			verificationExpiration: nowInUTC,
+			codeGenerationAttempts: userData.codeGenerationAttempts + 1,
+			firstGenerationAttempt: isItFirstAttempt ? nowInUTC : userData.firstGenerationAttempt,
+		}, {
+			where: { phone: encryptPhone(req.params.number) },
+		});
+		return Promise.all([verificationCode, updateUser]);
+	})
+	.spread(function(verificationCode, updatedUser) {
+		if (updatedUser[0] === 0) {
+			console.log(`${req.params.number} - Phone not in the database`);
+			throw new Error('Phone not in the database');
+		}
+
+		return client.messages.create({
+			to: req.params.number,
+			from: process.env.TWILIO_NUMBER,
+			body: `The verification code is ${verificationCode}`,
+		});
+	})
+	.then(function() {
+		res.send('"Code created"');
+		return res.status(201).end();
 	})
 	.catch(function(err) {
 		console.log(err);
-		return res.status(500).json(err);
+		return res.status(500).json(err.message);
 	});
 
 }
 app.get('/twofactor/:number', sendTwoFactorCode);
 
 export function checkTwoFactorCode(req, res, next) {
+	const phoneHash = encryptPhone(req.body.phone);
 	User.findOne({
 		where: {
-			phone: encryptPhone(req.body.phone),
-			verificationCode: req.body.code,
+			phone: phoneHash
 		},
-		attributes: ['id', 'verificationExpiration', 'verificationAttempts'],
+		attributes: ['id', 'verificationExpiration', 'verificationAttempts', 'verificationCode'],
 	})
 	.then(function(userData) {
-		console.log(JSON.stringify(userData));
 		const expirationDate = new Date(userData.verificationExpiration);
 		const now = new Date();
-		const id = userData.id;
-		if (!userData){
-			User.update({
-				verificationAttempts: (userData.verificationAttempts + 1),
-				where: { id : id },
+
+		if (userData.verificationCode !== req.body.code) {
+			return User.update({ verificationAttempts: (userData.verificationAttempts + 1) }, {
+				where: { phone: phoneHash },
 			})
-			.then(function(result){
+			.then(function(result) {
 				return res.status(500).json('Wrong code');
 			});			 
-		} else if (userData.verificationAttempts > 10) {
-			return res.status(500).json('Too many attemps. Please wait for 10 minutes and try again.');
-		} else if ((now - expirationDate) > (10 * 60 * 1000)) {
-			request({ uri: `http://localhost:9876/twofactor/${req.body.phone}`})
+		}
+
+		const hasExpired = (now - expirationDate) > (10 * 60 * 1000);
+		if (hasExpired) {
+			return request({ uri: `http://localhost:9876/twofactor/${req.body.phone}` })
 			.then(function(response) {
-				User.update({
-					verificationAttempts: 0,
-					where: { id : id },
-				})
-				.then(function(result){
-					return res.status(500).json('Your code has expired after 10 minutes. A new code is being sent.');
+				return User.update({ verificationAttempts: 0 }, {
+					where: { phone: phoneHash },
 				});
+			})
+			.then(function(result) {
+				return res.status(500).json('Your code has expired after 10 minutes. A new code is being sent.');
 			})
 			.catch(function(err) {
 				return res.status(500).json(`Your code has expired after 10 minutes. Impossible to generate a new code: ${err} Please try later.`);
-			});			 
-		} else {
-			User.update({
-				verificationAttempts: 0,
-				where: { id : id },
-			})
-			.then(function(result){
-				res.send('"Correct code"');
-				return res.status(200).end();
 			});
 		}
+
+		if (userData.verificationAttempts > 10) {
+			throw new Error('Too many attemps. Please wait for 10 minutes and try again.');
+		}
+
+		return User.update({ verificationAttempts: 0 }, {
+			where: { phone: phoneHash },
+		})
+		.then(function(result) {
+			// res.send('"Correct code"');
+			// return res.status(200).end();
+			return User.find({
+				where: {
+					id: result.id
+				},
+				attributes: userAttributes
+			})
+			.then(function(userResult) {
+				return res.status(201).json(userResult);
+			});
+		});
 	})
 	.catch((err) => {
 		console.log(err);
-		return res.status(500).json(err);
+		return res.status(500).json(err.message);
 	});
 }
 app.post('/twofactor', checkTwoFactorCode);
