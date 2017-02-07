@@ -52,7 +52,7 @@ const User = sequelize.define('User', {
 		type: Sequelize.INTEGER,
 	},
 	verificationExpiration: {
-		type: Sequelize.INTEGER,
+		type: Sequelize.DATE,
 	}
 });
 User.isHierarchy();
