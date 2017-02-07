@@ -9,6 +9,7 @@ const urldomain = process.env.API_SERVER;
 export function callFromServer(req, res) {
 	const userId = req.body.userId;
 	const congressNumber = req.body.congressNumber;
+
 	User.findOne({
 		where: {
 			id: userId,
@@ -16,10 +17,11 @@ export function callFromServer(req, res) {
 	})
 	.then(function(newUser) {
 		const userPhone = decryptPhone(newUser.dataValues.phone);
+		console.log(urldomain + '/newcall/' + congressNumber);	
 		client.makeCall({
 			to: userPhone,
 			from: process.env.TWILIO_NUMBER,
-			url: urldomain + '/newcall',
+			url: urldomain + '/newcall/' + congressNumber,
 		}, function (err, message) {
 			console.log(err);
 			if (err) {
@@ -49,9 +51,8 @@ export function newCall(req, res, next) {
 			call.say('I\'m sorry - we cannot find your number in our system. Please signup at fifty nifty dot org. Thank you.');
 			call.hangup();
 		} else {
-			call.play('static/representative.mp3');
 			call.say('Connecting to Ed Markey');
-			// Now connect them to the real number.
+			call.dial({ hangupOnStar: true }, req.params.phoneNumber);
 			call.hangup();
 		}
 		res.status(200);
@@ -63,7 +64,8 @@ export function newCall(req, res, next) {
 		return res.status(500).json('Error with new call');
 	});
 }
-app.post('/newcall', newCall);
+app.post('/newcall/:phoneNumber', newCall);
+
 
 export function callStatusChange(req, res, next) {	
 	console.log('In call status change ', req.body);
