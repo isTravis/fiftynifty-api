@@ -43,6 +43,12 @@ const User = sequelize.define('User', {
 	},
 	district: {
 		type: Sequelize.INTEGER,
+	},
+	verificationCode: {
+		type: Sequelize.INTEGER,
+	},
+	verificationExpiration: {
+		type: Sequelize.INTEGER,
 	}
 });
 User.isHierarchy();
@@ -56,6 +62,7 @@ const Call = sequelize.define('Call', {
 	duration: { type: Sequelize.INTEGER },
 	// callerId
 });
+
 
 // A pub can have many contributors, but a contributor belongs to only a single pub
 User.hasMany(Call, { onDelete: 'CASCADE', as: 'calls', foreignKey: 'callerId' });

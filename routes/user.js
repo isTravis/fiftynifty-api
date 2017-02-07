@@ -1,10 +1,13 @@
+import twilio from 'twilio';
 import Promise from 'bluebird';
 import request from 'request-promise';
 import app from '../server';
-import { User, Call } from '../models';
+import { User, Call, VerificationCode } from '../models';
 import { encryptPhone } from '../utilities/encryption';
+// import { parse, format } from 'libphonenumber-js';
 
 export const userAttributes = ['id', 'name', 'zipcode', 'parentId', 'hierarchyLevel', 'lat', 'lon', 'createdAt', 'state', 'district'];
+const client = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
 const getStateDistrict = function (locData) {
 	const lookupQuery = locData.lat ? `latitude=${locData.lat}&longitude=${locData.lon}` : `zip=${locData.zipcode}`;
@@ -155,3 +158,90 @@ export function findLatLocFromAddressInput(req, res, next) {
 	});
 }
 app.post('/address', findLatLocFromAddressInput);
+
+export function sendTwoFactorCode(req, res, next) {
+	// Generate random in range
+	const verificationCode = Math.floor(Math.random() * (999999 - 100000) + 100000);
+	User.update({
+		verificationCode: verificationCode,
+		verificationExpiration: (new Date()).toUTCString(),
+	}, {
+		where: { phone: encryptPhone(req.params.number) },
+	})
+	.then(function(result) {
+		if (result[0] === 0){
+			console.log(req.params.number + ' - Phone not in the database');
+			return res.status(500).json('Phone not in the database');
+		}
+	})
+	.catch(function(err) {
+		console.log('Verification code creation error' + err);
+		return res.status(500).json(err);
+	});
+
+	client.messages.create({
+		to: req.params.number,
+		from: process.env.TWILIO_NUMBER,
+		body: 'The verification code is ' + verificationCode,
+	})
+	.then(function() {
+		res.send('"Code created"');
+		return res.status(201).end();
+	});
+}
+app.get('/twofactor/:number', sendTwoFactorCode);
+
+export function checkTwoFactorCode(req, res, next) {
+	User.findOne({
+		where: {
+			phone: encryptPhone(req.body.phone),
+			verificationCode: req.body.code,
+		},
+		attributes: ['id', 'verificationExpiration', 'verificationAttempts'],
+	})
+	.then(function(userData) {
+		console.log(JSON.stringify(userData));
+		const expirationDate = new Date(userData.verificationExpiration);
+		const now = new Date();
+		const id = userData.id;
+		if (!userData){
+			User.update({
+				verificationAttempts: (userData.verificationAttempts + 1),
+				where: { id : id },
+			})
+			.then(function(result){
+				return res.status(500).json('Wrong code');
+			});			 
+		} else if (userData.verificationAttempts > 10) {
+			return res.status(500).json('Too many attemps. Please wait for 10 minutes and try again.');
+		} else if ((now - expirationDate) > (10 * 60 * 1000)) {
+			request({ uri: `http://localhost:9876/twofactor/${req.body.phone}`})
+			.then(function(response) {
+				User.update({
+					verificationAttempts: 0,
+					where: { id : id },
+				})
+				.then(function(result){
+					return res.status(500).json('Your code has expired after 10 minutes. A new code is being sent.');
+				});
+			})
+			.catch(function(err) {
+				return res.status(500).json("Your code has expired after 10 minutes. Impossible to generate a new code. Please try later.");
+			});			 
+		} else {
+			User.update({
+				verificationAttempts: 0,
+				where: { id : id },
+			})
+			.then(function(result){
+				res.send('"Correct code"');
+				return res.status(200).end();
+			});
+		}
+	})
+	.catch((err) => {
+		console.log(err);
+		return res.status(500).json(err);
+	});
+}
+app.post('/twofactor', checkTwoFactorCode);
