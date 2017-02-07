@@ -6,7 +6,7 @@ import { User, Call, VerificationCode } from '../models';
 import { encryptPhone } from '../utilities/encryption';
 // import { parse, format } from 'libphonenumber-js';
 
-export const userAttributes = ['id', 'name', 'zipcode', 'parentId', 'hierarchyLevel', 'lat', 'lon', 'createdAt', 'state', 'district'];
+export const userAttributes = ['id', 'name', 'zipcode', 'parentId', 'hierarchyLevel', 'lat', 'lon', 'createdAt', 'state', 'district', 'verificationCode', 'verificationAttempts', 'codeGenerationAttempts', 'firstGenerationAttempt'];
 const client = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
 const getStateDistrict = function (locData) {
@@ -160,34 +160,57 @@ export function findLatLocFromAddressInput(req, res, next) {
 app.post('/address', findLatLocFromAddressInput);
 
 export function sendTwoFactorCode(req, res, next) {
-	// Generate random in range
-	const verificationCode = Math.floor(Math.random() * (999999 - 100000) + 100000);
-	User.update({
-		verificationCode: verificationCode,
-		verificationExpiration: (new Date()).toUTCString(),
-	}, {
-		where: { phone: encryptPhone(req.params.number) },
+	// Check this is legit
+	User.findOne({
+		where: { phone: req.params.number},
+		attributes: userAttributes,
 	})
-	.then(function(result) {
-		if (result[0] === 0){
-			console.log(req.params.number + ' - Phone not in the database');
-			return res.status(500).json('Phone not in the database');
-		}
+	.then(function(userData) { 
+		const firstGenerationAttempt = new Date(userData.firstGenerationAttempt);
+		const now = new Date();
+		const diff = now - firstGenerationAttempt;
+		if ( userData.codeGenerationAttempts > 10 && diff > (10 * 60 * 1000) ) { // Not legit
+			return res.status(500).json('Too many code generation attemps. Try again in 10 minutes.');
+		} else () { // It's legit
+			// Generate random in range
+			const verificationCode = Math.floor(Math.random() * (999999 - 100000) + 100000);
+			const isItFirstAttempt = (userData.codeGenerationAttempts === 0);
+			const nowInUTC = now.toUTCString();
+			User.update({
+				verificationCode: verificationCode,
+				verificationExpiration: nowInUTC,
+				codeGenerationAttempts: userData.codeGenerationAttempts + 1,
+				firstGenerationAttempt: isItFirstAttempt ? nowInUTC : userData.firstGenerationAttempt,
+			}, {
+				where: { phone: encryptPhone(req.params.number) },
+			})
+			.then(function(result) {
+				if (result[0] === 0){
+					console.log(`${req.params.number} - Phone not in the database`);
+					return res.status(500).json('Phone not in the database');
+				}
+			})
+			.catch(function(err) {
+				console.log(`Verification code creation error ${err}`);
+				return res.status(500).json(err);
+			});
+
+			client.messages.create({
+				to: req.params.number,
+				from: process.env.TWILIO_NUMBER,
+				body: `The verification code is ${verificationCode}`,
+			})
+			.then(function() {
+				res.send('"Code created"');
+				return res.status(201).end();
+			});
+		} 
 	})
 	.catch(function(err) {
-		console.log('Verification code creation error' + err);
+		console.log(err);
 		return res.status(500).json(err);
 	});
 
-	client.messages.create({
-		to: req.params.number,
-		from: process.env.TWILIO_NUMBER,
-		body: 'The verification code is ' + verificationCode,
-	})
-	.then(function() {
-		res.send('"Code created"');
-		return res.status(201).end();
-	});
 }
 app.get('/twofactor/:number', sendTwoFactorCode);
 
@@ -226,7 +249,7 @@ export function checkTwoFactorCode(req, res, next) {
 				});
 			})
 			.catch(function(err) {
-				return res.status(500).json("Your code has expired after 10 minutes. Impossible to generate a new code. Please try later.");
+				return res.status(500).json(`Your code has expired after 10 minutes. Impossible to generate a new code: ${err} Please try later.`);
 			});			 
 		} else {
 			User.update({
