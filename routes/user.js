@@ -6,7 +6,7 @@ import { User, Call, VerificationCode } from '../models';
 import { encryptPhone } from '../utilities/encryption';
 // import { parse, format } from 'libphonenumber-js';
 
-export const userAttributes = ['id', 'name', 'zipcode', 'parentId', 'hierarchyLevel', 'lat', 'lon', 'createdAt', 'state', 'district', 'verificationCode', 'verificationAttempts', 'codeGenerationAttempts', 'firstGenerationAttempt'];
+export const userAttributes = ['id', 'name', 'zipcode', 'parentId', 'hierarchyLevel', 'lat', 'lon', 'createdAt', 'state', 'district'];
 const client = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
 const getStateDistrict = function (locData) {
@@ -196,21 +196,21 @@ export function sendTwoFactorCode(req, res, next) {
 				if (result[0] === 0){
 					console.log(`${req.params.number} - Phone not in the database`);
 					return res.status(500).json('Phone not in the database');
+				} else {
+					client.messages.create({
+						to: req.params.number,
+						from: process.env.TWILIO_NUMBER,
+						body: `The verification code is ${verificationCode}`,
+					})
+					.then(function() {
+						res.send('"Code created"');
+						return res.status(201).end();
+					});
 				}
 			})
 			.catch(function(err) {
 				console.log(`Verification code creation error ${err}`);
 				return res.status(500).json(err);
-			});
-
-			client.messages.create({
-				to: req.params.number,
-				from: process.env.TWILIO_NUMBER,
-				body: `The verification code is ${verificationCode}`,
-			})
-			.then(function() {
-				res.send('"Code created"');
-				return res.status(201).end();
 			});
 		} 
 	})
