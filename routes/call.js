@@ -9,6 +9,7 @@ const urldomain = process.env.API_SERVER;
 export function callFromServer(req, res) {
 	const userId = req.body.userId;
 	const congressNumber = req.body.congressNumber;
+	console.log(`Call from frontend - user #${userId} to ${congressNumber}`);
 
 	User.findOne({
 		where: {
@@ -17,6 +18,7 @@ export function callFromServer(req, res) {
 	})
 	.then(function(newUser) {
 		const userPhone = decryptPhone(newUser.dataValues.phone);
+		console.log(`Call from frontend - phone ${userPhone} to ${congressNumber}`);
 		console.log(urldomain + '/newcall/' + congressNumber);	
 		client.makeCall({
 			to: userPhone,
