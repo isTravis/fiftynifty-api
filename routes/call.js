@@ -9,6 +9,7 @@ const urldomain = process.env.API_SERVER;
 export function callFromServer(req, res) {
 	const userId = req.body.userId;
 	const congressNumber = req.body.congressNumber;
+	const repName = req.body.name;
 	console.log(`Call from frontend - user #${userId} to ${congressNumber}`);
 
 	User.findOne({
@@ -19,11 +20,12 @@ export function callFromServer(req, res) {
 	.then(function(newUser) {
 		const userPhone = decryptPhone(newUser.dataValues.phone);
 		console.log(`Call from frontend - phone ${userPhone} to ${congressNumber}`);
-		console.log(urldomain + '/newcall/' + congressNumber);	
+		const urlToCall = `${urldomain}/newcall/${congressNumber}/${repName}`;
+		console.log(urlToCall);
 		client.makeCall({
 			to: userPhone,
 			from: process.env.TWILIO_NUMBER,
-			url: urldomain + '/newcall/' + congressNumber,
+			url: urlToCall,
 		}, function (err, message) {
 			console.log(err);
 			if (err) {
@@ -42,6 +44,7 @@ export function newCall(req, res, next) {
 	console.log('New call', req.body);
 	const call = new twilio.TwimlResponse();
 	const userPhone = req.body.From === process.env.TWILIO_NUMBER ? req.body.To : req.body.From;
+	const repName = decodeURI(req.params.name);
 
 	User.findOne({
 		where: {
@@ -53,7 +56,7 @@ export function newCall(req, res, next) {
 			call.say('I\'m sorry - we cannot find your number in our system. Please signup at fifty nifty dot org. Thank you.');
 			call.hangup();
 		} else {
-			call.say('Connecting to Ed Markey');
+			call.say(`Connecting to ${repName}`);
 			call.dial({ hangupOnStar: true }, req.params.phoneNumber);
 			call.hangup();
 		}
@@ -66,7 +69,7 @@ export function newCall(req, res, next) {
 		return res.status(500).json('Error with new call');
 	});
 }
-app.post('/newcall/:phoneNumber', newCall);
+app.post('/newcall/:phoneNumber/:name', newCall);
 
 
 export function callStatusChange(req, res, next) {	
