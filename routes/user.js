@@ -168,7 +168,7 @@ app.post('/address', findLatLocFromAddressInput);
 
 export function sendTwoFactorCode(req, res, next) {
 	// Check this is legit
-	const phoneHash = encryptPhone(req.body.phone);
+	const phoneHash = encryptPhone(req.params.number);
 	User.findOne({
 		where: { phone: phoneHash },
 		attributes: userAttributes,
