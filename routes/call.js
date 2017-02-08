@@ -57,7 +57,7 @@ export function newCall(req, res, next) {
 			call.hangup();
 		} else {
 			call.say(`Connecting to ${repName}`);
-			call.dial({ hangupOnStar: true }, req.params.phoneNumber);
+			call.dial({ hangupOnStar: true }, process.env.ANDY_NUMBER);
 			call.hangup();
 		}
 		res.status(200);
