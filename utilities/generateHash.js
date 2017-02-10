@@ -8,3 +8,14 @@ export function generateHash(length) {
 	}
 	return hash;
 }
+
+export function generateTextCode() {
+	const tokenLength = 6;
+	const possible = '0123456789';
+
+	let hash = '';
+	for (let index = 0; index < tokenLength; index++) {
+		hash += possible.charAt(Math.floor(Math.random() * possible.length));
+	}
+	return hash;
+}

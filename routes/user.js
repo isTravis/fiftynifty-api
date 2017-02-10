@@ -1,8 +1,9 @@
 import Promise from 'bluebird';
 import request from 'request-promise';
 import app from '../server';
-import { User, Call } from '../models';
+import { sequelize, User, Call } from '../models';
 import { encryptPhone } from '../utilities/encryption';
+import { generateTextCode } from '../utilities/generateHash';
 // import { parse, format } from 'libphonenumber-js';
 
 export const userAttributes = ['id', 'name', 'zipcode', 'parentId', 'hierarchyLevel', 'lat', 'lon', 'createdAt', 'state', 'district'];
@@ -25,6 +26,7 @@ const queryForUser = function(userId) {
 	return User.findOne({
 		where: {
 			id: userId,
+			signupCompleted: true,
 		},
 		include: [
 			{ model: User, as: 'descendents', hierarchy: true, attributes: userAttributes, include: { model: Call, as: 'calls' } },
@@ -51,6 +53,7 @@ const queryForUserDetails = function(userId) {
 	return User.findOne({
 		where: {
 			id: userId,
+			signupCompleted: true
 		},
 		attributes: userAttributes,
 	})
@@ -87,30 +90,50 @@ app.get('/username', getUserDetails);
 
 export function postUser(req, res, next) {	
 	const phoneHash = encryptPhone(req.body.phone);
-	console.log(phoneHash, 'length: ', phoneHash.length);
 	const locData = { zipcode: req.body.zipcode };
-	getStateDistrict(locData)
-	.then(function(stateDist) {
-		if (!stateDist.state) { throw new Error('Invalid Zipcode'); }
-		return User.create({
+	User.findOne({
+		where: {
 			phone: phoneHash,
-			name: req.body.name,
-			zipcode: req.body.zipcode,
-			parentId: req.body.parentId,
-			state: stateDist.state,
-			district: stateDist.district,
+			signupCompleted: true,
+		}
+	})
+	.then(function(completedUserData) {
+		if (completedUserData) { throw new Error('Phone number already used'); }
+		return User.update({ signupAttempts: sequelize.literal('"signupAttempts" + 1') }, {
+			where: { phone: phoneHash, signupCompleted: false },
+			individualHooks: true, // necessary for afterUpdate hook to fire.
 		});
 	})
-	.then(function(result) {
-		return User.find({
-			where: {
-				id: result.id
-			},
-			attributes: userAttributes
+	.then(function(updateCount) {
+		if (updateCount[0]) { 
+			return User.findOne({ where: { phone: phoneHash } }); 
+		}
+
+		return getStateDistrict(locData)
+		.then(function(stateDist) {
+			if (!stateDist.state) { throw new Error('Invalid Zipcode'); }
+			return User.create({
+				phone: phoneHash,
+				name: req.body.name,
+				zipcode: req.body.zipcode,
+				parentId: req.body.parentId,
+				state: stateDist.state,
+				district: stateDist.district,
+				signupCode: generateTextCode(),
+				signupAttempts: 1,
+				signupCompleted: false,
+			});
 		});
 	})
 	.then(function(userData) {
-		return res.status(201).json(userData);
+		return client.messages.create({
+			to: req.body.phone,
+			from: process.env.TWILIO_NUMBER,
+			body: `Your authentication code is ${userData.signupCode}. Welcome to Fifty Nifty! `,
+		});
+	})
+	.then(function(result) {
+		return res.status(201).json(true);
 	})
 	.catch(function(err) {
 		console.error('Error in postUser: ', err);
@@ -121,6 +144,39 @@ export function postUser(req, res, next) {
 	});
 }
 app.post('/user', postUser);
+
+export function postUserAuthenticate(req, res, next) {
+	const phoneHash = encryptPhone(req.body.phone);
+	return User.update({ signupCompleted: true }, {
+		where: {
+			phone: phoneHash,
+			signupCompleted: false,
+			signupCode: req.body.signupCode,
+		}
+	})
+	.then(function(updateCount) {
+		if (!updateCount[0]) { 
+			throw new Error('Invalid authentication code');
+		}
+		return User.findOne({
+			where: {
+				phone: phoneHash,
+				signupCompleted: true,
+			},
+			attributes: userAttributes
+		})
+	})
+	.then(function(userData) {
+		return res.status(201).json(userData);
+	})
+	.catch(function(err) {
+		console.error('Error in postUserAuthenticate: ', err);
+		let message = 'Invalid authentication code';
+		return res.status(500).json(message);
+	});
+}
+
+app.post('/user/authenticate', postUserAuthenticate);
 
 export function findLatLocFromAddressInput(req, res, next) {
 	// Address: String '123 Chestnut St Boston '
@@ -183,7 +239,7 @@ export function sendTwoFactorCode(req, res, next) {
 		} 
 		// It's legit
 		// Generate random in range
-		const verificationCode = Math.floor(Math.random() * ((999999 - 100000) + 100000));
+		const verificationCode = generateTextCode();
 		const isItFirstAttempt = (userData.codeGenerationAttempts === 0);
 		const nowInUTC = now.toUTCString();
 		const updateUser = User.update({
