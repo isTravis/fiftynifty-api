@@ -6,7 +6,7 @@ import { encryptPhone } from '../utilities/encryption';
 import { generateTextCode } from '../utilities/generateHash';
 // import { parse, format } from 'libphonenumber-js';
 
-export const userAttributes = ['id', 'name', 'zipcode', 'parentId', 'hierarchyLevel', 'lat', 'lon', 'createdAt', 'state', 'district'];
+export const userAttributes = ['id', 'name', 'zipcode', 'parentId', 'hierarchyLevel', 'lat', 'lon', 'createdAt', 'state', 'district', 'variant'];
 const client = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 const urldomain = process.env.API_SERVER;
 
@@ -118,6 +118,7 @@ export function postUser(req, res, next) {
 				name: req.body.name,
 				zipcode: req.body.zipcode,
 				parentId: req.body.parentId,
+				variant: req.body.variant,
 				state: stateDist.state,
 				district: stateDist.district,
 				signupCode: generateTextCode(),
