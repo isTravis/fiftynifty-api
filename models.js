@@ -48,16 +48,26 @@ const User = sequelize.define('User', {
 	district: {
 		type: Sequelize.INTEGER,
 	},
+	variant: {
+		type: Sequelize.INTEGER,
+	},
 	verificationCode: {
 		type: Sequelize.STRING,
 	},
 	verificationExpiration: {
 		type: Sequelize.DATE,
 	},
+	verificationAttempts: {
+		type: Sequelize.INTEGER,
+		defaultValue: 0,
+	},
 	signupCode: {
 		type: Sequelize.STRING,
 	},
-	signupAttempts: { type: Sequelize.INTEGER },
+	signupAttempts: { 
+		type: Sequelize.INTEGER,
+		defaultValue: 1, 
+	},
 	signupCompleted: { type: Sequelize.BOOLEAN },
 });
 User.isHierarchy();
