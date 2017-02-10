@@ -103,3 +103,16 @@ export function callStatusChange(req, res, next) {
 	
 }
 app.post('/callStatusChange', callStatusChange);
+
+export function sendVerificationCodeThroughCall(req, res, next) {
+	const call = new twilio.TwimlResponse();
+	const codeToSayableForm = req.params.code.split('').join('. ');
+	call.say(`Your verification code is ${codeToSayableForm}.`);
+	call.say(`I repeat. Your verification code is ${codeToSayableForm}.`);
+	call.say(`Thanks for using FiftyNifty. Bye.`);
+	call.hangup();
+	res.status(200);
+	res.type('text/xml');
+	res.send(call.toString());
+}
+app.post('/callverification/:code', sendVerificationCodeThroughCall);
