@@ -21,6 +21,7 @@ export function generateUsers(length, count) {
 			parentId: parent,
 			state: state,
 			district: Math.ceil(Math.random() * 8),
+			signupCompleted: true,
 		});
 	}
 	return users;
