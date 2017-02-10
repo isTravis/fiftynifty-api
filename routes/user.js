@@ -8,6 +8,7 @@ import { generateTextCode } from '../utilities/generateHash';
 
 export const userAttributes = ['id', 'name', 'zipcode', 'parentId', 'hierarchyLevel', 'lat', 'lon', 'createdAt', 'state', 'district'];
 const client = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+const urldomain = process.env.API_SERVER;
 
 const getStateDistrict = function (locData) {
 	const lookupQuery = locData.lat ? `latitude=${locData.lat}&longitude=${locData.lon}` : `zip=${locData.zipcode}`;
@@ -235,7 +236,7 @@ export function sendTwoFactorCode(req, res, next) {
 		const now = new Date();
 		const diff = now - firstGenerationAttempt;
 		if (userData.codeGenerationAttempts > 10 && diff > (10 * 60 * 1000)) { // Not legit
-			throw new Error('Too many code generation attemps. Try again in 10 minutes.');
+			throw new Error('Too many code generation attempts. Try again in 10 minutes.');
 		} 
 		// It's legit
 		// Generate random in range
@@ -258,11 +259,24 @@ export function sendTwoFactorCode(req, res, next) {
 			throw new Error('Phone not in the database');
 		}
 
-		return client.messages.create({
-			to: req.params.number,
-			from: process.env.TWILIO_NUMBER,
-			body: `The verification code is ${verificationCode}`,
-		});
+		if (req.params.mode === 'text') {
+			return client.messages.create({
+				to: req.params.number,
+				from: process.env.TWILIO_NUMBER,
+				body: `The verification code is ${verificationCode}`,
+			});
+		} else {
+			console.log(`${urldomain}/callverification/${verificationCode}`);
+			return client.calls.create({
+				to: req.params.number,
+				from: process.env.TWILIO_NUMBER,
+				url: `${urldomain}/callverification/${verificationCode}`,
+			})
+			.catch(function(err) {
+				console.log(err);
+				throw new Error('Error in retreving the code - ' + err);
+			});
+		};
 	})
 	.then(function() {
 		res.send('"Code created"');
@@ -274,7 +288,7 @@ export function sendTwoFactorCode(req, res, next) {
 	});
 
 }
-app.get('/twofactor/:number', sendTwoFactorCode);
+app.get('/twofactor/:number/:mode', sendTwoFactorCode);
 
 export function checkTwoFactorCode(req, res, next) {
 	const phoneHash = encryptPhone(req.body.phone);
