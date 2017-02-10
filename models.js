@@ -65,7 +65,7 @@ const User = sequelize.define('User', {
 		type: Sequelize.STRING,
 	},
 	signupAttempts: { 
-		type: Sequelize.INTEGER
+		type: Sequelize.INTEGER,
 		defaultValue: 1, 
 	},
 	signupCompleted: { type: Sequelize.BOOLEAN },
