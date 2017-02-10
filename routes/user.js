@@ -31,6 +31,7 @@ const queryForUser = function(userId) {
 		},
 		include: [
 			{ model: User, as: 'descendents', hierarchy: true, attributes: userAttributes, include: { model: Call, as: 'calls' } },
+			{ model: User, as: 'ancestors', attributes: userAttributes },
 			{ model: Call, as: 'calls' },
 		],
 		attributes: userAttributes,
