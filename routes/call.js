@@ -3,15 +3,15 @@ import app from '../server';
 import { User, Call } from '../models';
 import { encryptPhone, decryptPhone } from '../utilities/encryption';
 import { queryForUser } from './user';
+import request from 'request-promise';
 
 const client = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 const urldomain = process.env.API_SERVER;
 
 export function callFromServer(req, res) {
 	const userId = req.body.userId;
-	const congressNumber = req.body.congressNumber;
-	const repName = req.body.name;
-	console.log(`Call from frontend - user #${userId} to ${congressNumber}`);
+	const repId = req.body.repId;
+	console.log(`Call from frontend - user #${userId} to ${repId}`);
 
 	User.findOne({
 		where: {
@@ -20,8 +20,8 @@ export function callFromServer(req, res) {
 	})
 	.then(function(newUser) {
 		const userPhone = decryptPhone(newUser.dataValues.phone);
-		console.log(`Call from frontend - phone ${userPhone} to ${congressNumber}`);
-		const urlToCall = `${urldomain}/newcall/${congressNumber}/${repName}`;
+		console.log(`Call from frontend - phone ${userPhone} to ${repId}`);
+		const urlToCall = `${urldomain}/newcall/${repId}/`;
 		console.log(urlToCall);
 		client.makeCall({
 			to: userPhone,
@@ -46,7 +46,8 @@ export function newCall(req, res, next) {
 	const call = new twilio.TwimlResponse();
 	const fromServer = req.body.From === process.env.TWILIO_NUMBER ? true : false;
 	const userPhone = fromServer ? req.body.To : req.body.From;
-	const connectingToRep  = function(call, name, phone){
+	const connectingToRep  = function(call, repData){
+		const name = repData.first_name + ' ' + repData.last_name;
 		call.say(`Connecting to ${name}`);
 		call.dial({ hangupOnStar: true }, process.env.ANDY_NUMBER);
 		call.hangup();
@@ -55,14 +56,20 @@ export function newCall(req, res, next) {
 		res.send(call.toString());
 	};
 	if (fromServer) {
-		const repName = decodeURI(req.params.name);
-		connectingToRep(call, repName, req.params.phoneNumber);
+		const repId = req.params.repId;
+		console.log('hello');
+		return request({
+			uri: `https://congress.api.sunlightfoundation.com/legislators?apikey=${process.env.SUNLIGHT_FOUNDATION_KEY}&bioguide_id=${repId}`, 
+			json: true,
+		})
+		.then(function(repData) {
+			console.log(repData);
+			connectingToRep(call, repData.results[0]);
+		});
 	} else {
 		return queryForUser(userPhone)
 		.then(function(result) {
-			const firstRep = result.reps[0];
-			const firstRepName = firstRep.first_name + ' ' + firstRep.last_name;
-			connectingToRep(call, firstRepName, firstRep.phone);
+			connectingToRep(call, result.reps[0]);
 		})
 		.catch(function(err) {
 			console.error('Error in newcall:' + err.message);
@@ -78,9 +85,8 @@ export function newCall(req, res, next) {
 	}
 
 }
-app.post('/newcall/:phoneNumber/:name', newCall);
 app.post('/newcall', newCall);
-
+app.post('/newcall/:repId', newCall);
 
 export function callStatusChange(req, res, next) {	
 	console.log('In call status change ', req.body);

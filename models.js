@@ -63,6 +63,7 @@ const User = sequelize.define('User', {
 User.isHierarchy();
 
 const Call = sequelize.define('Call', {
+	// twilioId: { type: Sequelize.TEXT },
 	numberDialed: { type: Sequelize.TEXT },
 	recipientId: { type: Sequelize.TEXT },
 	district: { type: Sequelize.INTEGER },
