@@ -360,3 +360,29 @@ export function checkTwoFactorCode(req, res, next) {
 	});
 }
 app.post('/twofactor', checkTwoFactorCode);
+
+export function callAuthenticate(req, res, next) {
+	const phoneHash = encryptPhone(req.params.number);
+	return 	User.findOne({
+		where: {
+			phone: phoneHash
+		},
+		attributes: ['id', 'signupCode'],
+	})
+	.then(function(userData) {
+		return client.calls.create({
+			to: req.params.number,
+			from: process.env.TWILIO_NUMBER,
+			url: `${urldomain}/callverification/${userData.signupCode}`,
+		})
+		.catch(function(err) {
+			console.log(err);
+			throw new Error('Error in retreving the code - ' + err);
+		});
+	})
+	.catch(function(err) {
+		console.log(err);
+		return res.status(500).json(err.message);
+	});
+}
+app.get('/callAuthenticate/:number', callAuthenticate);
