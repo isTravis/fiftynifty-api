@@ -23,12 +23,16 @@ const getStateDistrict = function (locData) {
 	});
 };
 
-const queryForUser = function(userId) {
-	return User.findOne({
-		where: {
+export function queryForUser(userId, mode) {
+	const whereParams = (mode === 'id') ? {
 			id: userId,
 			signupCompleted: true,
-		},
+		} : {
+			phone: encryptPhone(userId),
+			signupCompleted: true,
+		};
+	return User.findOne({
+		where: whereParams,
 		include: [
 			{ model: User, as: 'descendents', hierarchy: true, attributes: userAttributes, include: { model: Call, as: 'calls' } },
 			{ model: User, as: 'ancestors', attributes: userAttributes },
@@ -65,7 +69,7 @@ const queryForUserDetails = function(userId) {
 };
 
 export function getUser(req, res, next) {
-	queryForUser(req.query.userId)
+	queryForUser(req.query.userId, 'id')
 	.then(function(userData) {
 		return res.status(201).json(userData);
 	})
@@ -213,7 +217,7 @@ export function findLatLocFromAddressInput(req, res, next) {
 		});
 	})
 	.then(function(updateCount) {
-		return queryForUser(req.body.userId);
+		return queryForUser(req.body.userId, 'id');
 	})
 	.then(function(userData) {
 		return res.status(201).json(userData); 
