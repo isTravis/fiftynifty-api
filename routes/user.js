@@ -54,19 +54,6 @@ export function queryForUser(userId, mode) {
 	});
 };
 
-// querying just for user details, not including phone calls and children, for showing referral on landing page
-const queryForUserDetails = function(userId) {
-	return User.findOne({
-		where: {
-			id: userId,
-			signupCompleted: true
-		},
-		attributes: userAttributes,
-	})
-	.then(function(userData) {
-		return userData.toJSON();
-	});
-};
 
 export function getUser(req, res, next) {
 	queryForUser(req.query.userId, 'id')
@@ -79,20 +66,6 @@ export function getUser(req, res, next) {
 	});
 }
 app.get('/user', getUser);
-
-
-export function getUserDetails(req, res, next) {
-	queryForUserDetails(req.query.userId)
-	.then(function(userData) {
-		return res.status(201).json(userData);
-	})
-	.catch(function(err) {
-		console.error('Error in getUser: ', err);
-		return res.status(500).json('User not found');
-	});
-}
-app.get('/username', getUserDetails);
-
 
 export function postUser(req, res, next) {	
 	const phoneHash = encryptPhone(req.body.phone);
@@ -152,6 +125,27 @@ export function postUser(req, res, next) {
 }
 app.post('/user', postUser);
 
+export function getUserSimple(req, res, next) {
+	User.findOne({
+		where: {
+			id: req.query.userId,
+			signupCompleted: true
+		},
+		attributes: userAttributes,
+	})
+	.then(function(userData) {
+		return userData.toJSON();
+	})
+	.then(function(userData) {
+		return res.status(201).json(userData);
+	})
+	.catch(function(err) {
+		console.error('Error in getUser: ', err);
+		return res.status(500).json('User not found');
+	});
+}
+app.get('/user/simple', getUserSimple);
+
 export function postUserAuthenticate(req, res, next) {
 	const phoneHash = encryptPhone(req.body.phone);
 	return User.update({ signupCompleted: true }, {
@@ -185,7 +179,7 @@ export function postUserAuthenticate(req, res, next) {
 
 app.post('/user/authenticate', postUserAuthenticate);
 
-export function findLatLocFromAddressInput(req, res, next) {
+export function putUserAddress(req, res, next) {
 	// Address: String '123 Chestnut St Boston '
 	// Zipcode: String '02476'
 	const GOOGLE_KEY = process.env.GEOCODING_API_KEY;
@@ -227,7 +221,7 @@ export function findLatLocFromAddressInput(req, res, next) {
 		return res.status(500).json(err); 
 	});
 }
-app.post('/address', findLatLocFromAddressInput);
+app.put('/user/address', putUserAddress);
 
 export function sendTwoFactorCode(req, res, next) {
 	// Check this is legit
