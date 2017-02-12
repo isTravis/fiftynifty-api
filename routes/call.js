@@ -57,7 +57,7 @@ export function newCall(req, res, next) {
 				completed: 0,
 		});
 		const name = repData.first_name + ' ' + repData.last_name;
-		call.say(`Welcome to Fifty Nifty. We'll be launching live soon. Please check back shortly.`);
+		call.say(`Welcome to Fifty Nifty. We'll be launching soon. Please check back shortly.`);
 		// call.say(`Connecting to ${name}`);
 		// call.dial({ hangupOnStar: true }, process.env.ANDY_NUMBER);
 		call.hangup();
