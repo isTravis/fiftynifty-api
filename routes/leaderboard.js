@@ -36,7 +36,7 @@ export function getLeaderboard(req, res, next) {
 		console.log('Using Cache: ', !leadersData[0].toJSON);
 		const outputData = leadersData[0].toJSON ? findAllToArray(leadersData) : JSON.parse(leadersData);
 		
-		const cacheTimeout = process.env.IS_PRODUCTION_API === 'TRUE' ? 60 * 10 : 10;
+		const cacheTimeout = process.env.IS_PRODUCTION_API === 'TRUE' ? 60 * 2 : 10;
 		const setCache = leadersData[0].toJSON ? redisClient.setexAsync('leaderboard', cacheTimeout, JSON.stringify(outputData)) : {};
 		return Promise.all([outputData, setCache]);
 	})

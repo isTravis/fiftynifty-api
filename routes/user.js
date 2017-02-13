@@ -10,7 +10,7 @@ export const callAttributes = ['id', 'createdAt', 'duration', 'state', 'district
 
 const client = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 const urldomain = process.env.API_SERVER;
-const cacheTimeout = process.env.IS_PRODUCTION_API === 'TRUE' ? 60 * 10 : 10;
+const cacheTimeout = process.env.IS_PRODUCTION_API === 'TRUE' ? 60 * 2 : 10;
 
 const getStateDistrict = function (locData) {
 	const lookupQuery = locData.lat ? `latitude=${locData.lat}&longitude=${locData.lon}` : `zip=${locData.zipcode}`;
