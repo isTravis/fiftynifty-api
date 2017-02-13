@@ -151,6 +151,7 @@ export function getUserSimple(req, res, next) {
 		attributes: ['id', 'name'],
 	})
 	.then(function(userData) {
+		if (!userData) { throw new Error('User not Found'); }
 		return userData.toJSON();
 	})
 	.then(function(userData) {
