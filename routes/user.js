@@ -4,9 +4,8 @@ import app from '../server';
 import { sequelize, User, Call } from '../models';
 import { encryptPhone } from '../utilities/encryption';
 import { generateTextCode } from '../utilities/generateHash';
-// import { parse, format } from 'libphonenumber-js';
 
-export const userAttributes = ['id', 'name', 'parentId', 'hierarchyLevel', 'createdAt', 'state', 'district', 'variant'];
+export const userAttributes = ['id', 'name', 'parentId', 'hierarchyLevel','createdAt', 'state', 'district', 'variant'];
 export const callAttributes = ['id', 'createdAt', 'duration', 'state', 'district', 'callerId']; 
 
 const client = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
@@ -40,7 +39,7 @@ export function queryForUser(userId, mode) {
 			{ model: User, as: 'ancestors', attributes: userAttributes },
 			{ model: Call, as: 'calls', attributes: callAttributes },
 		],
-		attributes: userAttributes,
+		attributes: [...userAttributes, 'lat', 'lon'],
 	})
 	.then(function(userData) {
 		if (!userData) { throw new Error('No userData'); }
@@ -52,7 +51,7 @@ export function queryForUser(userId, mode) {
 		return Promise.all([userData, findReps]);
 	})
 	.spread(function(userData, repsData) {
-		return { ...userData.toJSON(), reps: repsData.results };
+		return { ...userData.toJSON(), reps: repsData.results, lat: undefined, lon: undefined };
 	});
 }
 
