@@ -6,7 +6,9 @@ import { encryptPhone } from '../utilities/encryption';
 import { generateTextCode } from '../utilities/generateHash';
 // import { parse, format } from 'libphonenumber-js';
 
-export const userAttributes = ['id', 'name', 'zipcode', 'parentId', 'hierarchyLevel', 'lat', 'lon', 'createdAt', 'state', 'district', 'variant'];
+export const userAttributes = ['id', 'name', 'parentId', 'hierarchyLevel', 'createdAt', 'state', 'district', 'variant'];
+export const callAttributes = ['id', 'createdAt', 'duration', 'state', 'district', 'callerId']; 
+
 const client = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 const urldomain = process.env.API_SERVER;
 
@@ -34,9 +36,9 @@ export function queryForUser(userId, mode) {
 	return User.findOne({
 		where: whereParams,
 		include: [
-			{ model: User, as: 'descendents', hierarchy: true, attributes: userAttributes, include: { model: Call, as: 'calls' } },
+			{ model: User, as: 'descendents', hierarchy: true, attributes: userAttributes, include: { model: Call, as: 'calls', attributes: callAttributes } },
 			{ model: User, as: 'ancestors', attributes: userAttributes },
-			{ model: Call, as: 'calls' },
+			{ model: Call, as: 'calls', attributes: callAttributes },
 		],
 		attributes: userAttributes,
 	})
@@ -130,7 +132,7 @@ export function getUserSimple(req, res, next) {
 			id: req.query.userId,
 			signupCompleted: true
 		},
-		attributes: userAttributes,
+		attributes: ['id', 'name'],
 	})
 	.then(function(userData) {
 		return userData.toJSON();

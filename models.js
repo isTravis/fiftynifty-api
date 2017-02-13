@@ -1,6 +1,25 @@
+import Promise from 'bluebird';
 if (process.env.NODE_ENV !== 'production') {
 	require('./config.js');
 }
+
+/* Initialize Redis */
+/* ------------- */
+const redis = require('redis');
+Promise.promisifyAll(redis.RedisClient.prototype);
+Promise.promisifyAll(redis.Multi.prototype);
+
+const redisClient = redis.createClient(process.env.REDIS_URL);
+
+redisClient.on('error', function (err) {
+	console.log('redisClient Error:  ' + err);
+});
+
+// redisClient.flushdb( function (err, succeeded) {
+// 	console.log('Flushed Redis DB'); 
+// });
+
+/* ------------- */
 
 const Sequelize = require('sequelize');
 require('sequelize-hierarchy')(Sequelize);
@@ -95,5 +114,6 @@ const db = {
 
 db.sequelize = sequelize;
 db.Sequelize = Sequelize;
+db.redisClient = redisClient;
 
 module.exports = db;
