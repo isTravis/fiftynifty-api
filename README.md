@@ -13,3 +13,4 @@ npm install
 npm start
 ```
 
+The Frontend used along with this API is available at [https://github.com/isTravis/fiftynifty](https://github.com/isTravis/fiftynifty).
