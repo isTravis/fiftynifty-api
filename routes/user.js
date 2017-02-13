@@ -25,12 +25,12 @@ const getStateDistrict = function (locData) {
 
 export function queryForUser(userId, mode) {
 	const whereParams = (mode === 'id') ? {
-			id: userId,
-			signupCompleted: true,
-		} : {
-			phone: encryptPhone(userId),
-			signupCompleted: true,
-		};
+		id: userId,
+		signupCompleted: true,
+	} : {
+		phone: encryptPhone(userId),
+		signupCompleted: true,
+	};
 	return User.findOne({
 		where: whereParams,
 		include: [
@@ -52,8 +52,7 @@ export function queryForUser(userId, mode) {
 	.spread(function(userData, repsData) {
 		return { ...userData.toJSON(), reps: repsData.results };
 	});
-};
-
+}
 
 export function getUser(req, res, next) {
 	queryForUser(req.query.userId, 'id')
@@ -148,6 +147,7 @@ app.get('/user/simple', getUserSimple);
 
 export function postUserAuthenticate(req, res, next) {
 	const phoneHash = encryptPhone(req.body.phone);
+	// console.log(req.body.phone + ' ' + phoneHash + ' ' + req.body.signupCode);
 	return User.update({ signupCompleted: true }, {
 		where: {
 			phone: phoneHash,
@@ -165,14 +165,14 @@ export function postUserAuthenticate(req, res, next) {
 				signupCompleted: true,
 			},
 			attributes: userAttributes
-		})
+		});
 	})
 	.then(function(userData) {
 		return res.status(201).json(userData);
 	})
 	.catch(function(err) {
 		console.error('Error in postUserAuthenticate: ', err);
-		let message = 'Invalid authentication code';
+		const message = 'Invalid authentication code';
 		return res.status(500).json(message);
 	});
 }
@@ -276,7 +276,7 @@ export function sendTwoFactorCode(req, res, next) {
 				console.log(err);
 				throw new Error('Error in retreving the code - ' + err);
 			});
-		};
+		}
 	})
 	.then(function() {
 		res.send('"Code created"');

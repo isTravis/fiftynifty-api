@@ -1,10 +1,10 @@
 import twilio from 'twilio';
+import request from 'request-promise';
+import { parse, format } from 'libphonenumber-js';
 import app from '../server';
 import { User, Call } from '../models';
 import { encryptPhone, decryptPhone } from '../utilities/encryption';
 import { queryForUser } from './user';
-import request from 'request-promise';
-import { parse, format } from 'libphonenumber-js';
 
 const client = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 const urldomain = process.env.API_SERVER;
@@ -43,27 +43,26 @@ app.post('/callfromserver', callFromServer);
 export function newCall(req, res, next) {	
 	// console.log('New call', req.body);
 	const call = new twilio.TwimlResponse();
-	const fromServer = req.body.From === process.env.TWILIO_NUMBER ? true : false;
+	const fromServer = req.body.From === process.env.TWILIO_NUMBER;
 	const userPhone = fromServer ? req.body.To : req.body.From;
-	const connectingToRep  = function(call, repData){
+	const connectingToRep = function(callObj, repData) {
 		const repPhone = format(parse(repData.phone, 'US'), 'International_plaintext');
 		Call.create({
-				twilioId: req.body.CallSid,
-				numberDialed: repPhone,
-				recipientId: repData.bioguide_id,
-				district: ( repData.title === 'Sen' ) ? 0 : repData.district,
-				state: repData.state,
-				zip: '00000',
-				completed: 0,
+			twilioId: req.body.CallSid,
+			numberDialed: repPhone,
+			recipientId: repData.bioguide_id,
+			district: (repData.title === 'Sen') ? 0 : repData.district,
+			state: repData.state,
+			zip: '00000',
+			completed: 0,
 		});
 		const name = repData.first_name + ' ' + repData.last_name;
-		call.say(`Welcome to Fifty Nifty. We'll be launching soon. Please check back shortly.`);
-		// call.say(`Connecting to ${name}`);
-		// call.dial({ hangupOnStar: true }, process.env.ANDY_NUMBER);
-		call.hangup();
+		callObj.say(`Connecting to ${name}`);
+		callObj.dial({ hangupOnStar: true }, repPhone);
+		callObj.hangup();
 		res.status(200);
 		res.type('text/xml');
-		res.send(call.toString());
+		res.send(callObj.toString());
 	};
 	if (fromServer) {
 		const repId = req.params.repId;
@@ -87,7 +86,7 @@ export function newCall(req, res, next) {
 				res.status(200);
 				res.type('text/xml');
 				res.send(call.toString());
-			};
+			}
 			return res.status(500).json('Error with new call');
 		});
 	}
@@ -98,7 +97,7 @@ app.post('/newcall/:repId', newCall);
 
 export function callStatusChange(req, res, next) {	
 	// console.log('In call status change ', req.body);
-	const fromServer = req.body.From === process.env.TWILIO_NUMBER ? true : false;
+	const fromServer = req.body.From === process.env.TWILIO_NUMBER;
 	const userPhone = fromServer ? req.body.To : req.body.From;
 	if (req.body.CallStatus === 'completed') {
 		return User.findOne({
@@ -138,7 +137,7 @@ export function sendVerificationCodeThroughCall(req, res, next) {
 	const codeToSayableForm = req.params.code.split('').join('. ');
 	call.say(`Hello. Here is your FiftyNifty verification code. ${codeToSayableForm}.`);
 	call.say(`I repeat. ${codeToSayableForm}.`);
-	call.say(`Thanks for using FiftyNifty. Bye.`);
+	call.say('Thanks for using FiftyNifty. Bye.');
 	call.hangup();
 	res.status(200);
 	res.type('text/xml');
