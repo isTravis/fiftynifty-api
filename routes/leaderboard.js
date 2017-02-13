@@ -11,7 +11,7 @@ export function queryForLeaderboard() {
 			signupCompleted: true,
 		},
 		include: [
-			{ model: User, as: 'descendents', hierarchy: true, where: { signupCompleted: true }, attributes: userAttributes, include: { model: Call, as: 'calls', attributes: callAttributes } },
+			{ model: User, as: 'descendents', hierarchy: true, where: { signupCompleted: true }, required: false, attributes: userAttributes, include: { model: Call, as: 'calls', attributes: callAttributes } },
 			{ model: Call, as: 'calls', attributes: callAttributes },
 		],
 		attributes: userAttributes,
