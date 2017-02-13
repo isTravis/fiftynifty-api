@@ -1,6 +1,6 @@
 # Introduction
 
-This API provides full access to the ListOfLinks database.
+This API provides full access to the Fifty Nifty database.
 
 # Running Locally
 
@@ -10,8 +10,6 @@ Then run:
 
 ```
 npm install
-npm run start
-npm run build-docs
+npm start
 ```
-`npm run buid-docs` will need to be run each time the template or api.raml is changed.
 
