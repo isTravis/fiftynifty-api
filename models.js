@@ -97,9 +97,15 @@ const Call = sequelize.define('Call', {
 	recipientId: { type: Sequelize.TEXT },
 	district: { type: Sequelize.INTEGER },
 	state: { type: Sequelize.TEXT },
-	zip: { type: Sequelize.TEXT },
+	zipcode: { 
+		type: Sequelize.STRING, // Stored as a string to preserve leading zeros. 
+		allowNull: false, 
+		validate: {
+			len: [5, 5],
+		},
+	},
 	duration: { type: Sequelize.INTEGER },
-	completed: { type: Sequelize.INTEGER },
+	completed: { type: Sequelize.BOOLEAN },
 	// callerId
 });
 

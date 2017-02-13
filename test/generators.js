@@ -41,10 +41,11 @@ export function generateCalls(users) {
 		return calls.map((call)=> {
 			return {
 				numberDialed: '+15555555555',
-				zip: user.zipcode,
+				zipcode: user.zipcode,
 				state: zipToState[user.zipcode],
 				duration: Math.ceil(Math.random() * 240),
 				callerId: user.id,	
+				completed: true,
 			};
 		});
 	});

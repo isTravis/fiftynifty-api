@@ -54,14 +54,17 @@ export function newCall(req, res, next) {
 			recipientId: repData.bioguide_id,
 			district: (repData.title === 'Sen') ? 0 : repData.district,
 			state: repData.state,
-			zip: '00000',
-			completed: 0,
+			zipcode: '00000',
+			completed: false,
 		});
 		const name = repData.first_name + ' ' + repData.last_name;
-		// callObj.say(`Connecting to ${name}`);
-		// callObj.dial({ hangupOnStar: true }, repPhone);
-		call.say(`Connecting to ${'Andy Lippman'}`);
- 		call.dial({ hangupOnStar: true }, process.env.ANDY_NUMBER);
+		if (process.env.IS_PRODUCTION_API === 'TRUE') {
+			callObj.say(`Connecting to ${name}`);
+			callObj.dial({ hangupOnStar: true }, repPhone);	
+		} else {
+			call.say(`Connecting to ${'Andy Lippman'}`);
+	 		call.dial({ hangupOnStar: true }, process.env.ANDY_NUMBER);	
+		}
 		callObj.hangup();
 		res.status(200);
 		res.type('text/xml');
@@ -113,7 +116,7 @@ export function callStatusChange(req, res, next) {
 				duration: req.body.CallDuration,
 				callerId: callingUser.id,
 				zipcode: callingUser.zipcode,
-				completed: 1,
+				completed: true,
 			}, {
 				where: {
 					twilioId: req.body.CallSid,

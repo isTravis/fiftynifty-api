@@ -220,20 +220,20 @@ export function putUserAddress(req, res, next) {
 	.then((response) => {
 		const lat = response.results[0].geometry.location.lat;
 		const lon = response.results[0].geometry.location.lng;
-		const zip = response.results[0].address_components.reduce((previous, current)=> {
+		const zipcode = response.results[0].address_components.reduce((previous, current)=> {
 			if (current.types[0] === 'postal_code') { return current.short_name; }
 			return previous;
 		}, '00000');
 
-		if (zip === '00000') { console.log(apiRequestUrl); }
+		if (zipcode === '00000') { console.log(apiRequestUrl); }
 		const locData = { lat: lat, lon: lon };
 		
-		return Promise.all([lat, lon, zip, getStateDistrict(locData)]);
+		return Promise.all([lat, lon, zipcode, getStateDistrict(locData)]);
 	})
-	.spread(function(lat, lon, zip, getLocResult) {
+	.spread(function(lat, lon, zipcode, getLocResult) {
 		const state = getLocResult.state;
 		const district = getLocResult.district;
-		return User.update({ lat: lat, lon: lon, zip: zip, state: state, district: district }, {
+		return User.update({ lat: lat, lon: lon, zipcode: zipcode, state: state, district: district }, {
 			where: {
 				id: req.body.userId
 			}
