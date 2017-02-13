@@ -1,7 +1,7 @@
 import Promise from 'bluebird';
 import request from 'request-promise';
 import app from '../server';
-import { sequelize, User, Call } from '../models';
+import { redisClient, sequelize, User, Call } from '../models';
 import { encryptPhone } from '../utilities/encryption';
 import { generateTextCode } from '../utilities/generateHash';
 
@@ -10,6 +10,7 @@ export const callAttributes = ['id', 'createdAt', 'duration', 'state', 'district
 
 const client = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 const urldomain = process.env.API_SERVER;
+const cacheTimeout = process.env.IS_PRODUCTION_API === 'TRUE' ? 60 * 10 : 10;
 
 const getStateDistrict = function (locData) {
 	const lookupQuery = locData.lat ? `latitude=${locData.lat}&longitude=${locData.lon}` : `zip=${locData.zipcode}`;
@@ -39,7 +40,7 @@ export function queryForUser(userId, mode) {
 			{ model: User, as: 'ancestors', attributes: userAttributes },
 			{ model: Call, as: 'calls', attributes: callAttributes },
 		],
-		attributes: [...userAttributes, 'lat', 'lon'],
+		attributes: [...userAttributes, 'lat', 'lon', 'zipcode'],
 	})
 	.then(function(userData) {
 		if (!userData) { throw new Error('No userData'); }
@@ -51,14 +52,30 @@ export function queryForUser(userId, mode) {
 		return Promise.all([userData, findReps]);
 	})
 	.spread(function(userData, repsData) {
-		return { ...userData.toJSON(), reps: repsData.results, lat: undefined, lon: undefined };
+		return { ...userData.toJSON(), reps: repsData.results, lat: undefined, lon: undefined, zipcode: undefined };
 	});
 }
 
 export function getUser(req, res, next) {
-	queryForUser(req.query.userId, 'id')
-	.then(function(userData) {
-		return res.status(201).json(userData);
+
+	console.time('userQueryTime');
+	redisClient.getAsync(`user_${req.query.userId}`)
+	.then(function(redisResult) {
+		if (redisResult) { return [redisResult, true]; }
+		return Promise.all([queryForUser(req.query.userId, 'id'), false]);
+	})
+	.spread(function(userData, usedCache) {
+		if (!userData) { throw new Error('Error finding user'); }
+		console.log('Using Cache: ', usedCache);
+		const outputData = !usedCache ? userData : JSON.parse(userData);
+		
+		
+		const setCache = !usedCache ? redisClient.setexAsync(`user_${req.query.userId}`, cacheTimeout, JSON.stringify(outputData)) : {};
+		return Promise.all([outputData, setCache]);
+	})
+	.spread(function(outputData, cacheResult) {
+		console.timeEnd('userQueryTime');
+		return res.status(201).json(outputData);
 	})
 	.catch(function(err) {
 		console.error('Error in getUser: ', err);
@@ -215,6 +232,9 @@ export function putUserAddress(req, res, next) {
 		return queryForUser(req.body.userId, 'id');
 	})
 	.then(function(userData) {
+		return Promise.all([userData, redisClient.setexAsync(`user_${req.body.userId}`, cacheTimeout, JSON.stringify(userData))]);
+	})
+	.spread(function(userData, redisResult) {
 		return res.status(201).json(userData); 
 	})
 	.catch((err) => {

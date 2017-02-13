@@ -1,8 +1,9 @@
+import Promise from 'bluebird';
 import twilio from 'twilio';
 import request from 'request-promise';
 import { parse, format } from 'libphonenumber-js';
 import app from '../server';
-import { User, Call } from '../models';
+import { redisClient, User, Call } from '../models';
 import { encryptPhone, decryptPhone } from '../utilities/encryption';
 import { queryForUser } from './user';
 
@@ -108,7 +109,7 @@ export function callStatusChange(req, res, next) {
 			}
 		})
 		.then(function(callingUser) {
-			return Call.update({
+			const updateCall = Call.update({
 				duration: req.body.CallDuration,
 				callerId: callingUser.id,
 				zipcode: callingUser.zipcode,
@@ -118,6 +119,10 @@ export function callStatusChange(req, res, next) {
 					twilioId: req.body.CallSid,
 				}
 			});
+			return Promise.all([callingUser, updateCall]);
+		})
+		.spread(function(callingUser, updateCallResult) {
+			return redisClient.delAsync(`user_${callingUser.id}`);
 		})
 		.then(function() {
 			res.status(200);
