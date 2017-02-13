@@ -200,12 +200,22 @@ app.post('/user/authenticate', postUserAuthenticate);
 export function putUserAddress(req, res, next) {
 	// Address: String '123 Chestnut St Boston '
 	// Zipcode: String '02476'
-	const GOOGLE_KEY = process.env.GEOCODING_API_KEY;
-	const addressHtml = encodeURI(req.body.address);
-	const zipCode = req.body.zipcode;
-	const apiRequestUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${addressHtml}&components=postal_code:${zipCode}&key=${GOOGLE_KEY}`;
+	
+	User.findOne({
+		where: {
+			id: req.body.userId,
+			signupCompleted: true,
+		}
+	})
+	.then(function(userData) {
+		if (!userData) { throw new Error('Error finding user with given userId'); }
 
-	request({ uri: apiRequestUrl, json: true })
+		const GOOGLE_KEY = process.env.GEOCODING_API_KEY;
+		const zipCode = userData.zipcode;
+		const addressHtml = encodeURI(req.body.address);
+		const apiRequestUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${addressHtml}&components=postal_code:${zipCode}&key=${GOOGLE_KEY}`;	
+		return request({ uri: apiRequestUrl, json: true });	
+	})
 	.then((response) => {
 		const lat = response.results[0].geometry.location.lat;
 		const lon = response.results[0].geometry.location.lng;
