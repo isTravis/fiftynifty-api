@@ -1,6 +1,10 @@
 import app from '../server';
 import { User } from '../models';
 import { encryptPhone } from '../utilities/encryption';
+import { userAttributes } from './user';
+import { generateTextCode } from '../utilities/generateHash';
+const urldomain = process.env.API_SERVER;
+const client = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
 export function sendTwoFactorCode(req, res, next) {
 	// Check this is legit
@@ -92,18 +96,7 @@ export function checkTwoFactorCode(req, res, next) {
 
 		const hasExpired = (now - expirationDate) > (10 * 60 * 1000);
 		if (hasExpired) {
-			return request({ uri: `http://localhost:9876/twofactor/${req.body.phone}` })
-			.then(function(response) {
-				return User.update({ verificationAttempts: 0 }, {
-					where: { phone: phoneHash },
-				});
-			})
-			.then(function(result) {
-				return res.status(500).json('Your code has expired after 10 minutes. A new code is being sent.');
-			})
-			.catch(function(err) {
-				return res.status(500).json(`Your code has expired after 10 minutes. Impossible to generate a new code: ${err} Please try later.`);
-			});
+			throw new Error('Code has expired. Please enter your phone number again.');
 		}
 
 		if (userData.verificationAttempts > 10) {

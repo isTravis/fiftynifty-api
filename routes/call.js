@@ -57,8 +57,10 @@ export function newCall(req, res, next) {
 			completed: 0,
 		});
 		const name = repData.first_name + ' ' + repData.last_name;
-		callObj.say(`Connecting to ${name}`);
-		callObj.dial({ hangupOnStar: true }, repPhone);
+		// callObj.say(`Connecting to ${name}`);
+		// callObj.dial({ hangupOnStar: true }, repPhone);
+		call.say(`Connecting to ${'Andy Lippman'}`);
+ 		call.dial({ hangupOnStar: true }, process.env.ANDY_NUMBER);
 		callObj.hangup();
 		res.status(200);
 		res.type('text/xml');
