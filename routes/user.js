@@ -36,7 +36,7 @@ export function queryForUser(userId, mode) {
 	return User.findOne({
 		where: whereParams,
 		include: [
-			{ model: User, as: 'descendents', hierarchy: true, attributes: userAttributes, include: { model: Call, as: 'calls', attributes: callAttributes } },
+			{ model: User, as: 'descendents', hierarchy: true,  where: { signupCompleted: true }, attributes: userAttributes, include: { model: Call, as: 'calls', attributes: callAttributes } },
 			{ model: User, as: 'ancestors', attributes: userAttributes },
 			{ model: Call, as: 'calls', attributes: callAttributes },
 		],

@@ -7,10 +7,11 @@ import { userAttributes, callAttributes } from './user';
 export function queryForLeaderboard() {
 	return User.findAll({
 		where: {
-			parentId: null
+			parentId: null,
+			signupCompleted: true,
 		},
 		include: [
-			{ model: User, as: 'descendents', hierarchy: true, attributes: userAttributes, include: { model: Call, as: 'calls', attributes: callAttributes } },
+			{ model: User, as: 'descendents', hierarchy: true, where: { signupCompleted: true }, attributes: userAttributes, include: { model: Call, as: 'calls', attributes: callAttributes } },
 			{ model: Call, as: 'calls', attributes: callAttributes },
 		],
 		attributes: userAttributes,
@@ -35,7 +36,7 @@ export function getLeaderboard(req, res, next) {
 		console.log('Using Cache: ', !leadersData[0].toJSON);
 		const outputData = leadersData[0].toJSON ? findAllToArray(leadersData) : JSON.parse(leadersData);
 		
-		const cacheTimeout = process.env.IS_PRODUCTION_API === 'TRUE' ? 60 * 10 : 30;
+		const cacheTimeout = process.env.IS_PRODUCTION_API === 'TRUE' ? 60 * 10 : 10;
 		const setCache = leadersData[0].toJSON ? redisClient.setexAsync('leaderboard', cacheTimeout, JSON.stringify(outputData)) : {};
 		return Promise.all([outputData, setCache]);
 	})

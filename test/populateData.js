@@ -4,10 +4,12 @@ import { generateUsers, generateCalls } from './generators';
 
 console.log('Beginning Population');
 
-// sequelize.sync({ force: true })
-User.count()
+sequelize.sync({ force: true })
+.then(function() {
+	return User.count()	;
+})
 .then(function(count) {
-	const newUsers = generateUsers(150, count);	
+	const newUsers = generateUsers(10, count);	
 	console.log('Beginning creating Users');
 	return Promise.each(newUsers, function(user, index) {
 		if (index > 0 && index % 100 === 0) { console.log(`Created ${index} users`); }
