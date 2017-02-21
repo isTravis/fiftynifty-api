@@ -142,62 +142,37 @@ export function postUser(req, res, next) {
 }
 app.post('/user', postUser);
 
-export function postUserUpdate(req, res, next) {	
-	const locData = { zipcode: req.body.zipcode };
+export function putUserUpdate(req, res, next) {	
+	const newName = req.body.name;
+	const newZipcode = req.body.zipcode;
 	User.findOne({
 		where: {
 			phone: phoneHash,
 			signupCompleted: true,
 		}
 	})
-	.then(function(completedUserData) {
-		if (completedUserData) { throw new Error('Phone number already used'); }
-		return User.update({ signupAttempts: sequelize.literal('"signupAttempts" + 1') }, {
-			where: { phone: phoneHash, signupCompleted: false },
-			individualHooks: true, // necessary for afterUpdate hook to fire.
+	.then(function(userData) {
+		return User.update({name: newName, zipcode: newZipcode}, {
+			where: {
+				id: req.body.userId
+			}
 		});
 	})
 	.then(function(updateCount) {
-		if (updateCount[0]) { 
-			return User.findOne({ where: { phone: phoneHash } }); 
-		}
-
-		return getStateDistrict(locData)
-		.then(function(stateDist) {
-			if (!stateDist.state) { throw new Error('Invalid Zipcode'); }
-			return User.create({
-				phone: phoneHash,
-				name: req.body.name,
-				zipcode: req.body.zipcode,
-				parentId: req.body.parentId,
-				variant: req.body.variant,
-				state: stateDist.state,
-				district: stateDist.district,
-				signupCode: generateTextCode(),
-				signupAttempts: 1,
-				signupCompleted: false,
-			});
-		});
+		return queryForUser(req.body.userId, 'id');
 	})
 	.then(function(userData) {
-		return client.messages.create({
-			to: req.body.phone,
-			from: process.env.TWILIO_NUMBER,
-			body: `Your authentication code is ${userData.signupCode}. Welcome to Fifty Nifty! `,
-		});
+		return Promise.all([userData, redisClient.setexAsync(`user_${req.body.userId}`, cacheTimeout, JSON.stringify(userData))]);
 	})
-	.then(function(result) {
-		return res.status(201).json(true);
+	.spread(function(userData, redisResult) {
+		return res.status(201).json(userData); 
 	})
 	.catch(function(err) {
-		console.error('Error in postUser: ', err);
-		let message = 'Phone number already used';
-		if (err.message === 'Invalid Zipcode') { message = 'Invalid Zipcode'; }
-
+		console.error('Error in putUserUpdate: ', err);
 		return res.status(500).json(message);
 	});
 }
-app.post('/user/update', postUser);
+app.put('/user/update', putUserUpdate);
 
 export function getUserSimple(req, res, next) {
 	User.findOne({
