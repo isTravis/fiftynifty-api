@@ -153,7 +153,7 @@ export function putUserUpdate(req, res, next) {
 		}
 	})
 	.then(function(userData) {
-		return User.update({ name: newName, zipcode: newZipcode }, {
+		return User.update({ name: newName, zipcode: newZipcode, lat: null, lon: null}, {
 			where: {
 				id: req.body.userId,
 			}
