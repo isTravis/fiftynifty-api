@@ -143,6 +143,7 @@ export function postUser(req, res, next) {
 app.post('/user', postUser);
 
 export function putUserUpdate(req, res, next) {	
+	const phoneHash = encryptPhone(req.body.phone);
 	const newName = req.body.name;
 	const newZipcode = req.body.zipcode;
 	User.findOne({
@@ -152,9 +153,9 @@ export function putUserUpdate(req, res, next) {
 		}
 	})
 	.then(function(userData) {
-		return User.update({name: newName, zipcode: newZipcode}, {
+		return User.update({ name: newName, zipcode: newZipcode }, {
 			where: {
-				id: req.body.userId
+				id: req.body.userId,
 			}
 		});
 	})
