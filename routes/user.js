@@ -142,11 +142,13 @@ export function postUser(req, res, next) {
 }
 app.post('/user', postUser);
 
+
 export function putUserUpdate(req, res, next) {	
 	const phoneHash = encryptPhone(req.body.phone);
 	const newName = req.body.name;
 	const newZipcode = req.body.zipcode;
 	const locData = { zipcode: newZipcode };
+
 	User.findOne({
 		where: {
 			phone: phoneHash,
@@ -159,6 +161,7 @@ export function putUserUpdate(req, res, next) {
 			if (!stateDist.state) { throw new Error('Invalid Zipcode'); }
 			return User.update({ 
 				name: newName, 
+
 				zipcode: newZipcode, 
 				state: stateDist.state,
 				district: stateDist.district, 
