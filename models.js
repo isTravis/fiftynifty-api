@@ -25,7 +25,7 @@ const Sequelize = require('sequelize');
 require('sequelize-hierarchy')(Sequelize);
 
 const useSSL = process.env.DATABASE_URL.indexOf('localhost:') === -1;
-const sequelize = new Sequelize(process.env.DATABASE_URL, { logging: false, dialectOptions: { ssl: useSSL } });
+const sequelize = new Sequelize(process.env.DATABASE_URL, { logging: console.log, dialectOptions: { ssl: useSSL } });
 
 // Change to true to update the model in the database.
 // NOTE: This being set to true will erase your data.

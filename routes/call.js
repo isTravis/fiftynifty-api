@@ -23,6 +23,7 @@ export function callFromServer(req, res) {
 	.then(function(newUser) {
 		const userPhone = decryptPhone(newUser.dataValues.phone);
 		const urlToCall = `${urldomain}/newcall/${repId}/`;
+		// console.log(userPhone + " " + process.env.TWILIO_NUMBER + " " + urlToCall);
 		client.makeCall({
 			to: userPhone,
 			from: process.env.TWILIO_NUMBER,

@@ -13,7 +13,8 @@
     "lint": "eslint .",
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "nodemon api.js",
-    "populate": "node test/initPopulation.js"
+    "populate": "node test/initPopulation.js",
+    "salt": "node test/initSalt.js"
   },
   "dependencies": {
     "babel-core": "^6.13.2",
