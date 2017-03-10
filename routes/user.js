@@ -3,9 +3,10 @@ import request from 'request-promise';
 import app from '../server';
 import { redisClient, sequelize, User, Call } from '../models';
 import { encryptPhone } from '../utilities/encryption';
-import { generateTextCode } from '../utilities/generateHash';
+import { generateTextCode, generateHash } from '../utilities/generateHash';
 
-export const userAttributes = ['id', 'name', 'parentId', 'hierarchyLevel','createdAt', 'state', 'district', 'variant', 'zipcode'];
+export const userAttributes = ['id', 'name', 'parentId', 'hierarchyLevel','createdAt', 'state', 'district', 'variant'];
+export const authUserAttributes = ['zipcode', 'hash'];
 export const callAttributes = ['id', 'createdAt', 'duration', 'state', 'district', 'callerId']; 
 
 const client = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
@@ -40,7 +41,7 @@ export function queryForUser(userId, mode) {
 			{ model: User, as: 'ancestors', attributes: userAttributes },
 			{ model: Call, as: 'calls', attributes: callAttributes },
 		],
-		attributes: [...userAttributes, 'lat', 'lon', 'zipcode'], 
+		attributes: [...userAttributes, 'lat', 'lon', 'zipcode', 'hash'], 
 	})
 	.then(function(userData) {
 		if (!userData) { throw new Error('No userData'); }
@@ -52,7 +53,7 @@ export function queryForUser(userId, mode) {
 		return Promise.all([userData, findReps]);
 	})
 	.spread(function(userData, repsData) {
-		return { ...userData.toJSON(), reps: repsData.results, lat: undefined, lon: undefined}; //  zipcode: undefined   used to be there too
+		return { ...userData.toJSON(), reps: repsData.results, lat: undefined, lon: undefined };
 	});
 }
 
@@ -75,7 +76,13 @@ export function getUser(req, res, next) {
 	})
 	.spread(function(outputData, cacheResult) {
 		console.timeEnd('userQueryTime');
-		return res.status(201).json(outputData);
+
+		const securedData = {
+			...outputData,
+			zipcode: req.query.hash === outputData.hash ? outputData.zipcode : undefined,
+			hash: req.query.hash === outputData.hash ? outputData.hash : undefined,
+		}
+		return res.status(201).json(securedData);
 	})
 	.catch(function(err) {
 		console.error('Error in getUser: ', err);
@@ -119,6 +126,7 @@ export function postUser(req, res, next) {
 				signupCode: generateTextCode(),
 				signupAttempts: 1,
 				signupCompleted: false,
+				hash: generateHash(),
 			});
 		});
 	})
@@ -143,33 +151,35 @@ export function postUser(req, res, next) {
 app.post('/user', postUser);
 
 
-export function putUserUpdate(req, res, next) {	
-	const phoneHash = encryptPhone(req.body.phone);
-	const newName = req.body.name;
-	const newZipcode = req.body.zipcode;
-	const locData = { zipcode: newZipcode };
+export function putUser(req, res, next) {	
+	const locData = { zipcode: req.body.zipcode };
 
 	User.findOne({
 		where: {
-			phone: phoneHash,
+			id: req.body.userId,
+			hash: req.body.hash,
 			signupCompleted: true,
 		}
 	})
 	.then(function(userData) {
+		if (!userData) { throw new Error('Unauthorized to update user with those credentials'); }
+
+		const zipChanged = userData.zipcode !== req.body.zipcode;
 		return getStateDistrict(locData)
 		.then(function (stateDist) {
 			if (!stateDist.state) { throw new Error('Invalid Zipcode'); }
 			return User.update({ 
-				name: newName, 
-
-				zipcode: newZipcode, 
+				name: req.body.name, 
+				zipcode: req.body.zipcode, 
 				state: stateDist.state,
 				district: stateDist.district, 
-				lat: null, 
-				lon: null
+				lat: zipChanged ? null : userData.lat, 
+				lon: zipChanged ? null : userData.lon
 			}, {
 				where: {
 					id: req.body.userId,
+					hash: req.body.hash,
+					signupCompleted: true,
 				}
 			});
 		})
@@ -188,7 +198,7 @@ export function putUserUpdate(req, res, next) {
 		return res.status(500).json(message);
 	});
 }
-app.put('/user/update', putUserUpdate);
+app.put('/user', putUser);
 
 export function getUserSimple(req, res, next) {
 	User.findOne({
@@ -231,7 +241,7 @@ export function postUserAuthenticate(req, res, next) {
 				phone: phoneHash,
 				signupCompleted: true,
 			},
-			attributes: userAttributes
+			attributes: [...userAttributes, ...authUserAttributes]
 		});
 	})
 	.then(function(userData) {
@@ -253,6 +263,7 @@ export function putUserAddress(req, res, next) {
 	User.findOne({
 		where: {
 			id: req.body.userId,
+			hash: req.body.hash,
 			signupCompleted: true,
 		}
 	})
@@ -283,7 +294,8 @@ export function putUserAddress(req, res, next) {
 		const district = getLocResult.district;
 		return User.update({ lat: lat, lon: lon, zipcode: zipcode, state: state, district: district }, {
 			where: {
-				id: req.body.userId
+				id: req.body.userId,
+				hash: req.body.hash,
 			}
 		});
 	})

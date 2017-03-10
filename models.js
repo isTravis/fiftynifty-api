@@ -48,6 +48,9 @@ const User = sequelize.define('User', {
 			len: [24, 24], // Phone number is encoded to 44 byte string
 		},
 	},
+	hash: {
+		type: Sequelize.TEXT,
+	},
 	zipcode: { 
 		type: Sequelize.STRING, // Stored as a string to preserve leading zeros. 
 		allowNull: false, 
