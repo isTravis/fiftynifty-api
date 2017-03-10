@@ -51,6 +51,12 @@ const User = sequelize.define('User', {
 	hash: {
 		type: Sequelize.TEXT,
 	},
+	email: {
+		type: Sequelize.STRING,
+		validate: {
+			isEmail: true
+		},
+	},
 	zipcode: { 
 		type: Sequelize.STRING, // Stored as a string to preserve leading zeros. 
 		allowNull: false, 
