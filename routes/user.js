@@ -154,6 +154,9 @@ app.post('/user', postUser);
 export function putUser(req, res, next) {	
 	const locData = { zipcode: req.body.zipcode };
 
+	if (!req.body.name) { return res.status(500).json('Name is required'); }
+	if (!req.body.zipcode) { return res.status(500).json('Zipcode is required'); }
+
 	User.findOne({
 		where: {
 			id: req.body.userId,
@@ -164,25 +167,26 @@ export function putUser(req, res, next) {
 	.then(function(userData) {
 		if (!userData) { throw new Error('Unauthorized to update user with those credentials'); }
 
+		return Promise.all([userData, getStateDistrict(locData)]);
+	})
+	.spread(function (userData, stateDist) {
+		if (!stateDist.state) { throw new Error('Invalid Zipcode'); }
+
 		const zipChanged = userData.zipcode !== req.body.zipcode;
-		return getStateDistrict(locData)
-		.then(function (stateDist) {
-			if (!stateDist.state) { throw new Error('Invalid Zipcode'); }
-			return User.update({ 
-				name: req.body.name, 
-				zipcode: req.body.zipcode, 
-				state: stateDist.state,
-				district: stateDist.district, 
-				lat: zipChanged ? null : userData.lat, 
-				lon: zipChanged ? null : userData.lon
-			}, {
-				where: {
-					id: req.body.userId,
-					hash: req.body.hash,
-					signupCompleted: true,
-				}
-			});
-		})
+		return User.update({ 
+			name: req.body.name, 
+			zipcode: req.body.zipcode, 
+			state: stateDist.state,
+			district: stateDist.district, 
+			lat: zipChanged ? null : userData.lat, 
+			lon: zipChanged ? null : userData.lon
+		}, {
+			where: {
+				id: req.body.userId,
+				hash: req.body.hash,
+				signupCompleted: true,
+			}
+		});
 	})
 	.then(function(updateCount) {
 		return queryForUser(req.body.userId, 'id');
@@ -195,7 +199,7 @@ export function putUser(req, res, next) {
 	})
 	.catch(function(err) {
 		console.error('Error in putUserUpdate: ', err);
-		return res.status(500).json(message);
+		return res.status(500).json(err.message);
 	});
 }
 app.put('/user', putUser);
