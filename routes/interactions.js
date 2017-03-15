@@ -1,7 +1,7 @@
 import app from '../server';
 import { User } from '../models';
 import { encryptPhone } from '../utilities/encryption';
-import { userAttributes } from './user';
+import { userAttributes, authUserAttributes } from './user';
 import { generateTextCode } from '../utilities/generateHash';
 const urldomain = process.env.API_SERVER;
 const client = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
@@ -113,7 +113,7 @@ export function checkTwoFactorCode(req, res, next) {
 				where: {
 					phone: phoneHash
 				},
-				attributes: userAttributes
+				attributes: [...userAttributes, ...authUserAttributes]
 			})
 			.then(function(userResult) {
 				return res.status(201).json(userResult);

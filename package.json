@@ -14,7 +14,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "nodemon api.js",
     "populate": "node test/initPopulation.js",
-    "salt": "node test/initSalt.js"
+    "salt": "node test/initSalt.js",
+    "createHashes": "node test/initCreateHashes.js"
   },
   "dependencies": {
     "babel-core": "^6.13.2",

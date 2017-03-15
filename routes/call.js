@@ -12,12 +12,14 @@ const urldomain = process.env.API_SERVER;
 
 export function callFromServer(req, res) {
 	const id = req.body.id;
+	const hash = req.body.hash;
 	const repId = req.body.repId;
 	console.log(`Call from frontend - user #${id} to ${repId}`);
 
 	User.findOne({
 		where: {
 			id: id,
+			hash: hash,
 		}
 	})
 	.then(function(newUser) {
@@ -31,14 +33,18 @@ export function callFromServer(req, res) {
 			StatusCallback: `${urldomain}/callStatusChange`,
 		}, function (err, message) {
 			if (err) {
-				res.status(500).send(err);
+				return res.status(500).send(err);
 			} else {
-				res.send({
+				return res.send({
 					message: 'Thank you! We will be calling you shortly.',
 				});
 			}
 		});
-	});
+	})
+	.catch(function(err) {
+		console.error('Error in callFromServer:' + err.message);
+		return res.status(500).send(err);
+	});;
 }
 app.post('/callfromserver', callFromServer);
 
