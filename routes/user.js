@@ -156,6 +156,7 @@ export function putUser(req, res, next) {
 
 	if (!req.body.name) { return res.status(500).json('Name is required'); }
 	if (!req.body.zipcode) { return res.status(500).json('Zipcode is required'); }
+	if (!req.body.email) { req.body.email = null; }
 
 	User.findOne({
 		where: {
@@ -176,6 +177,7 @@ export function putUser(req, res, next) {
 		return User.update({ 
 			name: req.body.name, 
 			zipcode: req.body.zipcode, 
+			email: req.body.email,
 			state: stateDist.state,
 			district: stateDist.district, 
 			lat: zipChanged ? null : userData.lat, 
