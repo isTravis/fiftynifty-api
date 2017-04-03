@@ -1,11 +1,13 @@
 import Promise from 'bluebird';
 import request from 'request-promise';
+import isEmail from 'validator/lib/isEmail';
+
 import app from '../server';
 import { redisClient, sequelize, User, Call } from '../models';
 import { encryptPhone } from '../utilities/encryption';
 import { generateTextCode, generateHash } from '../utilities/generateHash';
 
-export const userAttributes = ['id', 'name', 'parentId', 'hierarchyLevel','createdAt', 'state', 'district', 'variant'];
+export const userAttributes = ['id', 'name', 'parentId', 'hierarchyLevel', 'createdAt', 'state', 'district', 'variant'];
 export const authUserAttributes = ['zipcode', 'hash'];
 export const callAttributes = ['id', 'createdAt', 'duration', 'state', 'district', 'callerId']; 
 
@@ -37,7 +39,7 @@ export function queryForUser(userId, mode) {
 	return User.findOne({
 		where: whereParams,
 		include: [
-			{ model: User, as: 'descendents', hierarchy: true,  where: { signupCompleted: true }, required: false, attributes: userAttributes, include: { model: Call, as: 'calls', attributes: callAttributes } },
+			{ model: User, as: 'descendents', hierarchy: true, where: { signupCompleted: true }, required: false, attributes: userAttributes, include: { model: Call, as: 'calls', attributes: callAttributes } },
 			{ model: User, as: 'ancestors', attributes: userAttributes },
 			{ model: Call, as: 'calls', attributes: callAttributes },
 		],
@@ -81,7 +83,7 @@ export function getUser(req, res, next) {
 			...outputData,
 			zipcode: req.query.hash === outputData.hash ? outputData.zipcode : undefined,
 			hash: req.query.hash === outputData.hash ? outputData.hash : undefined,
-		}
+		};
 		return res.status(201).json(securedData);
 	})
 	.catch(function(err) {
@@ -156,7 +158,10 @@ export function putUser(req, res, next) {
 
 	if (!req.body.name) { return res.status(500).json('Name is required'); }
 	if (!req.body.zipcode) { return res.status(500).json('Zipcode is required'); }
-	if (!req.body.email) { req.body.email = null; }
+	let emailToSend = req.body.email;
+	if (req.body.email) { 
+		if (!isEmail(req.body.email)) { return res.status(500).json('Email invalid'); } 
+	} else { emailToSend = null; }
 
 	User.findOne({
 		where: {
@@ -177,7 +182,7 @@ export function putUser(req, res, next) {
 		return User.update({ 
 			name: req.body.name, 
 			zipcode: req.body.zipcode, 
-			email: req.body.email,
+			email: emailToSend,
 			state: stateDist.state,
 			district: stateDist.district, 
 			lat: zipChanged ? null : userData.lat, 
