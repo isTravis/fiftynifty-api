@@ -46,11 +46,12 @@ export function queryForUser(userId, mode) {
 	.then(function(userData) {
 		if (!userData) { throw new Error('No userData'); }
 		const lookupQuery = userData.lat ? `latitude=${userData.lat}&longitude=${userData.lon}` : `zip=${userData.zipcode}`;
-		const findReps = request({ 
-			uri: `https://congress.api.sunlightfoundation.com/legislators/locate?apikey=${process.env.SUNLIGHT_FOUNDATION_KEY}&${lookupQuery}`, 
-			json: true 
-		});
-		return Promise.all([userData, findReps]);
+		// const findReps = request({ 
+		// 	uri: `https://congress.api.sunlightfoundation.com/legislators/locate?apikey=${process.env.SUNLIGHT_FOUNDATION_KEY}&${lookupQuery}`, 
+		// 	json: true 
+		// });
+		// return Promise.all([userData, findReps]);
+		return Promise.all([userData, { results: [] });
 	})
 	.spread(function(userData, repsData) {
 		return { ...userData.toJSON(), reps: repsData.results, lat: undefined, lon: undefined };
