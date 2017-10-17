@@ -51,7 +51,7 @@ export function queryForUser(userId, mode) {
 		// 	json: true 
 		// });
 		// return Promise.all([userData, findReps]);
-		return Promise.all([userData, { results: [] });
+		return Promise.all([userData, { results: [] }]);
 	})
 	.spread(function(userData, repsData) {
 		return { ...userData.toJSON(), reps: repsData.results, lat: undefined, lon: undefined };
